@@ -1,4 +1,4 @@
-dynamixel_motor
+ivaDynamixel
 ===============
 
-ROS stack for interfacing with Robotis Dynamixel line of servo motors.
+(IVALab-tailored) ROS stack for interfacing with Robotis Dynamixel line of servo motors.

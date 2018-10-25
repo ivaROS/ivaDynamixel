@@ -84,6 +84,11 @@ class JointTrajectoryActionController():
         for c in controllers:
             if c.port_namespace in self.port_to_io: continue
             self.port_to_io[c.port_namespace] = c.dxl_io
+
+        # added motor bias [AHC: 20171127]
+        self.joint_to_bias = {}
+        for c in controllers:
+            self.joint_to_bias[c.joint_name] = c.motor_bias
             
         self.joint_states = dict(zip(self.joint_names, [c.joint_state for c in controllers]))
         self.num_joints = len(self.joint_names)
@@ -264,13 +269,15 @@ class JointTrajectoryActionController():
                     if hasattr(self.joint_to_controller[joint], "master_id"):
                         master_id = self.joint_to_controller[joint].master_id
                         slave_id = self.joint_to_controller[joint].slave_id
-                        master_pos, slave_pos = self.joint_to_controller[joint].pos_rad_to_raw(desired_position)
+                        # added motor bias [AHC: 20171127]
+                        master_pos, slave_pos = self.joint_to_controller[joint].pos_rad_to_raw(desired_position+self.joint_to_bias[joint])
                         spd = self.joint_to_controller[joint].spd_rad_to_raw(desired_velocity)
                         vals.append((master_id, master_pos, spd))
                         vals.append((slave_id, slave_pos, spd))
                     else:
                         motor_id = self.joint_to_controller[joint].motor_id
-                        pos = self.joint_to_controller[joint].pos_rad_to_raw(desired_position)
+                        # added motor bias [AHC: 20171127]
+                        pos = self.joint_to_controller[joint].pos_rad_to_raw(desired_position+self.joint_to_bias[joint])
                         spd = self.joint_to_controller[joint].spd_rad_to_raw(desired_velocity)
                         vals.append((motor_id, pos, spd))
                     
@@ -293,7 +300,8 @@ class JointTrajectoryActionController():
                             cur_pos = self.joint_states[joint].current_pos
                             
                             motor_id = self.joint_to_controller[joint].motor_id
-                            pos = self.joint_to_controller[joint].pos_rad_to_raw(cur_pos)
+                            # added motor bias [AHC: 20171127]
+                            pos = self.joint_to_controller[joint].pos_rad_to_raw(cur_pos+self.joint_to_bias[joint])
                             
                             vals.append((motor_id, pos))
                             

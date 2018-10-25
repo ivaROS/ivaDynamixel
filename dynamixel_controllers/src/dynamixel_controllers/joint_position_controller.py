@@ -64,6 +64,14 @@ class JointPositionController(JointController):
         else:
             self.acceleration = None
         
+        # added motor bias [AHC: 20160825]
+        if rospy.has_param(self.controller_namespace + '/motor/bias'):
+            self.motor_bias = rospy.get_param(self.controller_namespace + '/motor/bias')
+        else:
+            self.motor_bias = 0.0
+
+        rospy.loginfo("JointPositionController::JointPositionController() - Motor %d bias set to %.4f\n", self.motor_id, self.motor_bias);
+
         self.flipped = self.min_angle_raw > self.max_angle_raw
         
         self.joint_state = JointState(name=self.joint_name, motor_ids=[self.motor_id])
@@ -170,8 +178,8 @@ class JointPositionController(JointController):
             if state:
                 state = state[0]
                 self.joint_state.motor_temps = [state.temperature]
-                self.joint_state.goal_pos = self.raw_to_rad(state.goal, self.initial_position_raw, self.flipped, self.RADIANS_PER_ENCODER_TICK)
-                self.joint_state.current_pos = self.raw_to_rad(state.position, self.initial_position_raw, self.flipped, self.RADIANS_PER_ENCODER_TICK)
+                self.joint_state.goal_pos = self.raw_to_rad(state.goal, self.initial_position_raw, self.flipped, self.RADIANS_PER_ENCODER_TICK) - self.motor_bias	# added motor bias [AHC: 20160825]
+                self.joint_state.current_pos = self.raw_to_rad(state.position, self.initial_position_raw, self.flipped, self.RADIANS_PER_ENCODER_TICK) - self.motor_bias	# added motor bias [AHC: 20160825]
                 self.joint_state.error = state.error * self.RADIANS_PER_ENCODER_TICK
                 self.joint_state.velocity = state.speed * self.VELOCITY_PER_TICK
                 self.joint_state.load = state.load
@@ -181,7 +189,7 @@ class JointPositionController(JointController):
                 self.joint_state_pub.publish(self.joint_state)
 
     def process_command(self, msg):
-        angle = msg.data
+        angle = msg.data + self.motor_bias	# added motor bias [AHC: 20160825]
         mcv = (self.motor_id, self.pos_rad_to_raw(angle))
         self.dxl_io.set_multi_position([mcv])
 

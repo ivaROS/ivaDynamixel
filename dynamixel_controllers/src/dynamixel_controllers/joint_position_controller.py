@@ -117,7 +117,8 @@ class JointPositionController(JointController):
         if self.joint_speed < self.MIN_VELOCITY: self.joint_speed = self.MIN_VELOCITY
         elif self.joint_speed > self.joint_max_speed: self.joint_speed = self.joint_max_speed
         
-        self.set_speed(self.joint_speed)
+        # [AHC 20190506]: Unnecessarily causes torque enable (locking of motors to current positions)
+        #self.set_speed(self.joint_speed)
         
         return True
 

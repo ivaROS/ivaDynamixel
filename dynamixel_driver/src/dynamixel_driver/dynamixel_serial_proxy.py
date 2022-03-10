@@ -240,6 +240,8 @@ class SerialProxy():
                     if ose.errno != errno.EAGAIN:
                         rospy.logfatal(errno.errorcode[ose.errno])
                         rospy.signal_shutdown(errno.errorcode[ose.errno])
+                except Exception as ex:
+                    rospy.logwarn("Exception is: " + ex.__str__())
                         
             if motor_states:
                 msl = MotorStateList()

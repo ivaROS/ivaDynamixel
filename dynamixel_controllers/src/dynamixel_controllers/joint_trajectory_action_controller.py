@@ -32,7 +32,7 @@
 # ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 # POSSIBILITY OF SUCH DAMAGE.
 
-from __future__ import division
+
 
 
 __author__ = 'Antons Rebguns'
@@ -90,9 +90,9 @@ class JointTrajectoryActionController():
         for c in controllers:
             self.joint_to_bias[c.joint_name] = c.motor_bias
             
-        self.joint_states = dict(zip(self.joint_names, [c.joint_state for c in controllers]))
+        self.joint_states = dict(list(zip(self.joint_names, [c.joint_state for c in controllers])))
         self.num_joints = len(self.joint_names)
-        self.joint_to_idx = dict(zip(self.joint_names, range(self.num_joints)))
+        self.joint_to_idx = dict(list(zip(self.joint_names, list(range(self.num_joints)))))
 
     def initialize(self):
         ns = self.controller_namespace + '/joint_trajectory_action_node/constraints'
@@ -250,7 +250,7 @@ class JointTrajectoryActionController():
                 
             multi_packet = {}
             
-            for port, joints in self.port_to_joints.items():
+            for port, joints in list(self.port_to_joints.items()):
                 vals = []
                 
                 for joint in joints:
@@ -283,7 +283,7 @@ class JointTrajectoryActionController():
                     
                 multi_packet[port] = vals
                 
-            for port, vals in multi_packet.items():
+            for port, vals in list(multi_packet.items()):
                 self.port_to_io[port].set_multi_position_and_speed(vals)
                 
             while time < seg_end_times[seg]:
@@ -293,7 +293,7 @@ class JointTrajectoryActionController():
                     msg = 'New trajectory received. Aborting old trajectory.'
                     multi_packet = {}
                     
-                    for port, joints in self.port_to_joints.items():
+                    for port, joints in list(self.port_to_joints.items()):
                         vals = []
                         
                         for joint in joints:
@@ -307,7 +307,7 @@ class JointTrajectoryActionController():
                             
                         multi_packet[port] = vals
                         
-                    for port, vals in multi_packet.items():
+                    for port, vals in list(multi_packet.items()):
                         self.port_to_io[port].set_multi_position(vals)
                         
                     self.action_server.set_preempted(text=msg)

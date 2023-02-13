@@ -1,0 +1,23 @@
+FROM ros:kinetic-ros-core-xenial
+
+ENV ROS_PYTHON_VERSION=2
+
+RUN apt-get update && \
+    apt-get install -y \
+        apt-utils \
+        build-essential
+
+# Initalize rosdep; note that kinetic is EOL so we need to include the following
+# flag. If we leave it out, we will miss installing important dependencies.
+RUN rosdep init && rosdep update --include-eol-distros
+
+WORKDIR /app
+RUN mkdir src
+RUN /ros_entrypoint.sh catkin_make
+
+ADD docker/bin ./bin
+ADD . src/ivaDynamixel
+RUN rosdep install --from-paths src --ignore-src -r -y
+RUN /app/bin/ros_entrypoint.sh catkin_make
+
+ENTRYPOINT ["/app/bin/ros_entrypoint.sh"]

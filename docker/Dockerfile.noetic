@@ -1,15 +1,16 @@
-FROM ros:kinetic-ros-core-xenial
+FROM ros:noetic-ros-base-focal
 
-ENV ROS_PYTHON_VERSION=2
+ENV ROS_PYTHON_VERSION=3
 
 RUN apt-get update && \
     apt-get install -y \
         apt-utils \
-        build-essential
+        build-essential \
+        python-is-python3
 
-# Initalize rosdep; note that kinetic is EOL so we need to include the following
-# flag. If we leave it out, we will miss installing important dependencies.
-RUN rosdep init && rosdep update --include-eol-distros
+RUN apt-get install -y \
+    python3-serial \
+    ros-noetic-control-msgs
 
 WORKDIR /app
 RUN mkdir src

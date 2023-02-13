@@ -2,7 +2,7 @@
 version: "3.8"
 
 services:
-  kinetic:
+  kinetic: &base
     build:
       context: .
       dockerfile: docker/Dockerfile.kinetic
@@ -13,3 +13,9 @@ services:
     devices:
       - /dev/ttyUSB0
     privileged: true
+  noetic:
+    <<: *base
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.noetic
+

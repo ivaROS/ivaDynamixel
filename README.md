@@ -24,7 +24,7 @@ This may take some time, since this will pull down the base images for each of t
 Instead, you can specify a single container to build and run:
 
 ```bash
-docker compose kinetic
+docker compose build kinetic
 
 # script to verify information from motors
 docker compose run --rm kinetic python src/ivaDynamixel/dynamixel_driver/scripts/info_dump.py 1 2 3

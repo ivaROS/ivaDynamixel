@@ -1,7 +1,5 @@
 FROM ros:kinetic-ros-base-xenial
 
-ENV ROS_PYTHON_VERSION=2
-
 RUN apt-get update && \
     apt-get install -y \
         apt-utils \

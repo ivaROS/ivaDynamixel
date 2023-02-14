@@ -13,9 +13,13 @@ services:
     devices:
       - /dev/ttyUSB0
     privileged: true
+  melodic:
+    <<: *base
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.melodic
   noetic:
     <<: *base
     build:
       context: .
       dockerfile: docker/Dockerfile.noetic
-

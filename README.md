@@ -41,7 +41,7 @@ The containers run using the host ip stack, so all ROS nodes will be available u
 
 ### verifying behavior on python 2 and 3
 
-As an example, here is motor information run from kinetic on python 2 and noetic on python 3:
+As an example, here is motor information run from kinetic on python 2, melodic on python 2, and noetic on python 3:
 
 ```bash
 $ docker compose run --rm noetic python src/ivaDynamixel/dynamixel_driver/scripts/info_dump.py 1
@@ -55,6 +55,21 @@ Pinging motors:
         Current Position -------- 798
         Current Speed ----------- 0
         Current Temperature ----- 37°C
+        Current Voltage --------- 8.1v
+        Current Load ------------ 0
+        Moving ------------------ False
+
+$ docker compose run --rm melodic python src/ivaDynamixel/dynamixel_driver/scripts/info_dump.py 1
+Pinging motors:
+1 ... done
+    Motor 1 is connected:
+        Freespin: False
+        Model ------------------- EX-106+ (firmware version: 28)
+        Min Angle --------------- 0
+        Max Angle --------------- 4095
+        Current Position -------- 798
+        Current Speed ----------- 0
+        Current Temperature ----- 37\u00B0C
         Current Voltage --------- 8.1v
         Current Load ------------ 0
         Moving ------------------ False
@@ -74,3 +89,6 @@ Pinging motors:
         Current Load ------------ 0
         Moving ------------------ False
 ```
+
+Testing on melodic is tricky, since this is the first version of ROS that supported python 2 and 3, via `ROS_PYTHON_VERSION`.
+At time of writing, we can simplify assumptions that most code and modules from this point is written for ROS noetic (or ROS 2), and thus sets `ROS_PYTHON_VERSION=3`.

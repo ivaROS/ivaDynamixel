@@ -1,14 +1,13 @@
-FROM ros:noetic-ros-base-focal
+FROM ros:melodic-ros-base-bionic
 
 RUN apt-get update && \
     apt-get install -y \
         apt-utils \
-        build-essential \
-        python-is-python3
+        build-essential
 
 RUN apt-get install -y \
-    python3-serial \
-    ros-noetic-control-msgs
+    python-serial \
+    ros-melodic-control-msgs
 
 WORKDIR /app
 RUN mkdir src

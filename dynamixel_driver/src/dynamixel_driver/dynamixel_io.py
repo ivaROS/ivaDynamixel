@@ -44,8 +44,8 @@ __email__ = 'anton@email.arizona.edu'
 
 import time
 import serial
+import struct
 from array import array
-from binascii import b2a_hex
 from threading import Lock
 
 from .dynamixel_const import *
@@ -83,7 +83,8 @@ class DynamixelIO(object):
             self.ser.flushOutput()
             self.ser.close()
 
-    def __write_serial(self, data):
+    def __write_serial(self, packet):
+        data = array('B', packet)
         self.ser.flushInput()
         self.ser.flushOutput()
         self.ser.write(data)
@@ -94,16 +95,25 @@ class DynamixelIO(object):
         data = []
 
         try:
-            data.extend(self.ser.read(4))
-            if not data[0:2] == ['\xff', '\xff']: raise Exception('Wrong packet prefix %s' % data[0:2])
-            data.extend(self.ser.read(ord(data[3])))
-            data = array('B', ''.join(data)).tolist() # [int(b2a_hex(byte), 16) for byte in data]
+            # read the header to check how many more bytes to read
+            buf = self.ser.read(4)
+            data += struct.unpack('<4B', buf)
+
+            # throw an exception if we have the wrong number of bytes
+            if data[:2] != [0xff, 0xff]:
+                raise Exception('Wrong packet prefix %s' % data[:2])
+
+            # now read the rest of the packet
+            n = data[3]
+            buf = self.ser.read(n)
+            data += struct.unpack('<{}B'.format(n), buf)
         except Exception as e:
             raise DroppedPacketError('Invalid response received from motor %d. %s' % (servo_id, e))
 
         # verify checksum
         checksum = 255 - sum(data[2:-1]) % 256
-        if not checksum == data[-1]: raise ChecksumError(servo_id, data, checksum)
+        if not checksum == data[-1]:
+            raise ChecksumError(servo_id, data, checksum)
 
         return data
 
@@ -126,10 +136,9 @@ class DynamixelIO(object):
 
         # packet: FF  FF  ID LENGTH INSTRUCTION PARAM_1 ... CHECKSUM
         packet = [0xFF, 0xFF, servo_id, length, DXL_READ_DATA, address, size, checksum]
-        packetStr = array('B', packet).tostring() # same as: packetStr = ''.join([chr(byte) for byte in packet])
 
         with self.serial_mutex:
-            self.__write_serial(packetStr)
+            self.__write_serial(packet)
 
             # wait for response packet from the motor
             timestamp = time.time()
@@ -165,10 +174,8 @@ class DynamixelIO(object):
         packet.extend(data)
         packet.append(checksum)
 
-        packetStr = array('B', packet).tostring() # packetStr = ''.join([chr(byte) for byte in packet])
-
         with self.serial_mutex:
-            self.__write_serial(packetStr)
+            self.__write_serial(packet)
 
             # wait for response packet from the motor
             timestamp = time.time()
@@ -208,10 +215,8 @@ class DynamixelIO(object):
         packet.extend(flattened)
         packet.append(checksum)
 
-        packetStr = array('B', packet).tostring() # packetStr = ''.join([chr(byte) for byte in packet])
-
         with self.serial_mutex:
-            self.__write_serial(packetStr)
+            self.__write_serial(packet)
 
     def ping(self, servo_id):
         """ Ping the servo with "servo_id". This causes the servo to return a
@@ -228,10 +233,9 @@ class DynamixelIO(object):
 
         # packet: FF  FF  ID LENGTH INSTRUCTION CHECKSUM
         packet = [0xFF, 0xFF, servo_id, length, DXL_PING, checksum]
-        packetStr = array('B', packet).tostring()
 
         with self.serial_mutex:
-            self.__write_serial(packetStr)
+            self.__write_serial(packet)
 
             # wait for response packet from the motor
             timestamp = time.time()

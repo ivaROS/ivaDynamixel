@@ -5,6 +5,24 @@ This package is compatible with Python 2 and Python 3.
 
 ## quickstart
 
+Add the package to your catkin workspace and build it.
+
+```bash
+# where ~/catkin_ws is your catkin workspace
+cd ~/catkin_ws/src
+git clone https://github.com/ivaROS/ivaDynamixel.git
+cd ..
+catkin build
+```
+
+Then include it in your package:
+
+```xml
+  <run_depend>dynamixel_controllers</run_depend>
+```
+
+See the [dynamixel_tutorials](./dynamixel_tutorials) package for examples on how to use the package.
+
 ### general testing
 
 We've provided a few docker containers to test library package functionality across a few versions of ROS i.e., kinetic, melodic, and noetic.
@@ -40,6 +58,8 @@ Note that workspace is set under `/app` and the source for the repository under 
 The containers run using the host ip stack, so all ROS nodes will be available under `rostopic` or `rosservice`.
 
 ### verifying behavior on python 2 and 3
+
+#### basic serialization - info_dump.py
 
 As an example, here is motor information run from kinetic on python 2, melodic on python 2, and noetic on python 3:
 
@@ -92,3 +112,56 @@ Pinging motors:
 
 Testing on melodic is tricky, since this is the first version of ROS that supported python 2 and 3, via `ROS_PYTHON_VERSION`.
 At time of writing, we can simplify assumptions that most code and modules from this point is written for ROS noetic (or ROS 2), and thus sets `ROS_PYTHON_VERSION=3`.
+
+#### ros nodes - controller manager and spawner
+
+We also test the behavior of the controller manager and spawner on python 2 vs python 3.
+The main difference is a change in import mechanism, but there is refactoring of the code too.
+
+We will run `controller_manager.launch` and `controller_spawner.launch` from the `dynamixel_tutorials` package.
+These need to get run in separate terminals in order to verify behavior.
+
+Via kinetic:
+
+```bash
+docker compose run --rm kinetic roslaunch dynamixel_tutorials controller_manager.launch
+docker compose run --rm kinetic roslaunch dynamixel_tutorials controller_spawner.launch
+
+# from the dynamixel manager
+process[dynamixel_manager-2]: started with pid [67]
+[INFO] [1676480719.748477]: pan_tilt_port: Pinging motor IDs 1 through 25...
+[INFO] [1676480722.229833]: pan_tilt_port: Found 9 motors - 1 MX-106 [2], 3 EX-106+ [1, 3, 4], 2 AX-12 [8, 9], 3 MX-28 [5, 6, 7], initialization complete.
+[INFO] [1676480727.857555]: JointPositionController::JointPositionController() - Motor 5 bias set to 0.0000
+
+[INFO] [1676480727.903481]: JointPositionController::JointPositionController() - Motor 6 bias set to 0.0000
+
+# from the dynamixel spawner
+process[dynamixel_controller_spawner-1]: started with pid [39]
+[INFO] [1676480727.815928]: pan_tilt_port controller_spawner: waiting for controller_manager dxl_manager to startup in global namespace...
+[INFO] [1676480727.820646]: pan_tilt_port controller_spawner: All services are up, spawning controllers...
+[INFO] [1676480727.873546]: Controller pan_controller successfully started.
+[INFO] [1676480727.916967]: Controller tilt_controller successfully started.
+```
+
+Via noetic:
+
+```bash
+docker compose run --rm noetic roslaunch dynamixel_tutorials controller_manager.launch
+docker compose run --rm noetic roslaunch dynamixel_tutorials controller_spawner.launch
+
+# from the dynamixel manager
+process[dynamixel_manager-2]: started with pid [49]
+[INFO] [1676480834.207882]: pan_tilt_port: Pinging motor IDs 1 through 25...
+[INFO] [1676480836.688936]: pan_tilt_port: Found 9 motors - 3 EX-106+ [1, 3, 4], 1 MX-106 [2], 3 MX-28 [5, 6, 7], 2 AX-12 [8, 9], initialization complete.
+[INFO] [1676480841.728839]: JointPositionController::JointPositionController() - Motor 5 bias set to 0.0000
+
+[INFO] [1676480841.763914]: JointPositionController::JointPositionController() - Motor 6 bias set to 0.0000
+
+# from the dynamixel spawner
+process[dynamixel_controller_spawner-1]: started with pid [32]
+[INFO] [1676480841.695405]: pan_tilt_port controller_spawner: waiting for controller_manager dxl_manager to startup in global namespace...
+[INFO] [1676480841.704013]: pan_tilt_port controller_spawner: All services are up, spawning controllers...
+[INFO] [1676480841.739664]: Controller pan_controller successfully started.
+[INFO] [1676480841.775393]: Controller tilt_controller successfully started.
+[dynamixel_controller_spawner-1] process has finished cleanly
+```

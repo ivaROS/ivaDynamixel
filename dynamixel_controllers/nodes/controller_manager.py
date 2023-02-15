@@ -83,28 +83,17 @@ class ControllerManager:
         for port_namespace, port_config in list(serial_ports.items()):
             port_name = port_config["port_name"]
             baud_rate = port_config["baud_rate"]
-            readback_echo = (
-                port_config["readback_echo"]
-                if "readback_echo" in port_config
-                else False
-            )
-            min_motor_id = (
-                port_config["min_motor_id"] if "min_motor_id" in port_config else 0
-            )
-            max_motor_id = (
-                port_config["max_motor_id"] if "max_motor_id" in port_config else 253
-            )
-            update_rate = (
-                port_config["update_rate"] if "update_rate" in port_config else 5
-            )
+            readback_echo = port_config.get("readback_echo", False)
+            min_motor_id = port_config.get("min_motor_id", 0)
+            max_motor_id = port_config.get("max_motor_id", 253)
+            update_rate = port_config.get("update_rate", 5)
             error_level_temp = 75
             warn_level_temp = 70
 
             if "diagnostics" in port_config:
-                if "error_level_temp" in port_config["diagnostics"]:
-                    error_level_temp = port_config["diagnostics"]["error_level_temp"]
-                if "warn_level_temp" in port_config["diagnostics"]:
-                    warn_level_temp = port_config["diagnostics"]["warn_level_temp"]
+                diagnostics = port_config["diagnostics"]
+                error_level_temp = diagnostics.get("error_level_temp", error_level_temp)
+                warn_level_temp = diagnostics.get("warn_level_temp", warn_level_temp)
 
             serial_proxy = SerialProxy(
                 port_name,
@@ -125,22 +114,7 @@ class ControllerManager:
             #      /dynamixel_manager/robot_head_port/start_controller
             # where 'dynamixel_manager' is manager's namespace
             #       'robot_arm_port' and 'robot_head_port' are human readable names for serial ports
-            rospy.Service(
-                "%s/%s/start_controller" % (manager_namespace, port_namespace),
-                StartController,
-                self.start_controller,
-            )
-            rospy.Service(
-                "%s/%s/stop_controller" % (manager_namespace, port_namespace),
-                StopController,
-                self.stop_controller,
-            )
-            rospy.Service(
-                "%s/%s/restart_controller" % (manager_namespace, port_namespace),
-                RestartController,
-                self.restart_controller,
-            )
-
+            self._init_services(manager_namespace, port_namespace)
             self.serial_proxies[port_namespace] = serial_proxy
 
         # services for 'meta' controllers, e.g. joint trajectory controller
@@ -150,21 +124,7 @@ class ControllerManager:
         # serial ports.
         # NOTE: all serial ports that meta controller needs should be managed by
         # the same controler manager.
-        rospy.Service(
-            "%s/meta/start_controller" % manager_namespace,
-            StartController,
-            self.start_controller,
-        )
-        rospy.Service(
-            "%s/meta/stop_controller" % manager_namespace,
-            StopController,
-            self.stop_controller,
-        )
-        rospy.Service(
-            "%s/meta/restart_controller" % manager_namespace,
-            RestartController,
-            self.restart_controller,
-        )
+        self._init_services(manager_namespace, "meta")
 
         self.diagnostics_pub = rospy.Publisher(
             "/diagnostics", DiagnosticArray, queue_size=1
@@ -172,9 +132,48 @@ class ControllerManager:
         if self.diagnostics_rate > 0:
             Thread(target=self.diagnostics_processor).start()
 
+    def _init_services(self, manager_namespace, port_namespace):
+        prefix = "{}/{}".format(manager_namespace, port_namespace)
+        rospy.Service(
+            "{}/start_controller".format(prefix), StartController, self.start_controller
+        )
+        rospy.Service(
+            "{}/stop_controller".format(prefix), StopController, self.stop_controller
+        )
+        rospy.Service(
+            "{}/restart_controller".format(prefix),
+            RestartController,
+            self.restart_controller,
+        )
+
     def on_shutdown(self):
         for serial_proxy in list(self.serial_proxies.values()):
             serial_proxy.disconnect()
+
+    def _diagnostic_status(self, controller):
+        joint_state = controller.joint_state
+        temps = joint_state.motor_temps
+        max_temp = max(temps)
+
+        return DiagnosticStatus(
+            name="Joint Controller (%s)" % controller.joint_name,
+            level=DiagnosticStatus.OK,
+            message="OK",
+            hardware_id="Robotis Dynamixel %s on port %s"
+            % (
+                str(joint_state.motor_ids),
+                controller.port_namespace,
+            ),
+            values=[
+                KeyValue("Goal", str(joint_state.goal_pos)),
+                KeyValue("Position", str(joint_state.current_pos)),
+                KeyValue("Error", str(joint_state.error)),
+                KeyValue("Velocity", str(joint_state.velocity)),
+                KeyValue("Load", str(joint_state.load)),
+                KeyValue("Moving", str(joint_state.is_moving)),
+                KeyValue("Temperature", str(max_temp)),
+            ],
+        )
 
     def diagnostics_processor(self):
         diag_msg = DiagnosticArray()
@@ -186,31 +185,7 @@ class ControllerManager:
 
             for controller in list(self.controllers.values()):
                 try:
-                    joint_state = controller.joint_state
-                    temps = joint_state.motor_temps
-                    max_temp = max(temps)
-
-                    status = DiagnosticStatus()
-                    status.name = "Joint Controller (%s)" % controller.joint_name
-                    status.hardware_id = "Robotis Dynamixel %s on port %s" % (
-                        str(joint_state.motor_ids),
-                        controller.port_namespace,
-                    )
-                    status.values.append(KeyValue("Goal", str(joint_state.goal_pos)))
-                    status.values.append(
-                        KeyValue("Position", str(joint_state.current_pos))
-                    )
-                    status.values.append(KeyValue("Error", str(joint_state.error)))
-                    status.values.append(
-                        KeyValue("Velocity", str(joint_state.velocity))
-                    )
-                    status.values.append(KeyValue("Load", str(joint_state.load)))
-                    status.values.append(KeyValue("Moving", str(joint_state.is_moving)))
-                    status.values.append(KeyValue("Temperature", str(max_temp)))
-                    status.level = DiagnosticStatus.OK
-                    status.message = "OK"
-
-                    diag_msg.status.append(status)
+                    diag_msg.status.append(self._diagnostic_status(controller))
                 except:
                     pass
 

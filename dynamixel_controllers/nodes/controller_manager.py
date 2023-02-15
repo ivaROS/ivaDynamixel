@@ -46,6 +46,8 @@ __email__ = "anton@email.arizona.edu"
 from threading import Thread, Lock
 
 import sys
+import imp
+import traceback
 
 import rospy
 
@@ -61,7 +63,6 @@ from dynamixel_controllers.srv import StopController
 from dynamixel_controllers.srv import StopControllerResponse
 from dynamixel_controllers.srv import RestartController
 from dynamixel_controllers.srv import RestartControllerResponse
-import importlib
 
 
 class ControllerManager:
@@ -235,37 +236,24 @@ class ControllerManager:
         try:
             if module_name not in sys.modules:
                 # import if module not previously imported
-                package_module = __import__(
-                    package_path, globals(), locals(), [module_name], -1
-                )
+                package_module = __import__(package_path, fromlist=[module_name])
             else:
                 # reload module if previously imported
-                package_module = importlib.reload(sys.modules[package_path])
+                # note: imp is deprecated in python 3.4 and will be removed in python 3.12
+                package_module = imp.reload(sys.modules[package_path])
             controller_module = getattr(package_module, module_name)
-        except ImportError as ie:
+        except Exception:
             self.start_controller_lock.release()
             return StartControllerResponse(
                 False,
-                "Cannot find controller module. Unable to start controller %s\n%s"
-                % (module_name, str(ie)),
-            )
-        except SyntaxError as se:
-            self.start_controller_lock.release()
-            return StartControllerResponse(
-                False,
-                "Syntax error in controller module. Unable to start controller %s\n%s"
-                % (module_name, str(se)),
-            )
-        except Exception as e:
-            self.start_controller_lock.release()
-            return StartControllerResponse(
-                False,
-                "Unknown error has occured. Unable to start controller %s\n%s"
-                % (module_name, str(e)),
+                "Unable to start controller {}\n{}".format(
+                    module_name, traceback.format_exc()
+                ),
             )
 
         kls = getattr(controller_module, class_name)
 
+        # meta controller is a special case, it doesn't have its own serial port
         if port_name == "meta":
             self.waiting_meta_controllers.append(
                 (controller_name, req.dependencies, kls)
@@ -274,6 +262,7 @@ class ControllerManager:
             self.start_controller_lock.release()
             return StartControllerResponse(True, "")
 
+        # check if port_name is valid
         if port_name != "meta" and (port_name not in self.serial_proxies):
             self.start_controller_lock.release()
             return StartControllerResponse(
@@ -282,10 +271,10 @@ class ControllerManager:
                 % (port_name, str(list(self.serial_proxies.keys())), controller_name),
             )
 
+        # intialize controller
         controller = kls(
             self.serial_proxies[port_name].dxl_io, controller_name, port_name
         )
-
         if controller.initialize():
             controller.start()
             self.controllers[controller_name] = controller

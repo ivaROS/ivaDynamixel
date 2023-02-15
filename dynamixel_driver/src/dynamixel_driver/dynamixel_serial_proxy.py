@@ -252,8 +252,10 @@ class SerialProxy():
                 
                 # calculate actual update rate
                 current_time = rospy.Time.now()
-                rates.append(1.0 / (current_time - last_time).to_sec())
-                self.actual_rate = round(sum(rates)/num_events, 2)
+                diff = (current_time - last_time).to_sec()
+                if diff:
+                    rates.append(1.0 / diff)
+                    self.actual_rate = round(sum(rates)/num_events, 2)
                 last_time = current_time
                 
             rate.sleep()

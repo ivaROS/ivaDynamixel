@@ -1,6 +1,6 @@
-<package>
+<package format="3">
   <name>dynamixel_driver</name>
-  <version>0.4.1</version>
+  <version>0.5.0</version>
   <description>
     This package provides low level IO for Robotis Dynamixel servos.
     Fully supports and was tested with AX-12, AX-18, RX-24, RX-28,
@@ -22,9 +22,10 @@
 
   <buildtool_depend>catkin</buildtool_depend>
 
-  <run_depend>rospy</run_depend>
-  <run_depend>diagnostic_msgs</run_depend>
-  <run_depend>python-serial</run_depend>
+  <exec_depend>rospy</exec_depend>
+  <exec_depend>diagnostic_msgs</exec_depend>
+  <exec_depend condition="$ROS_PYTHON_VERSION == 2">python-serial</exec_depend>
+  <exec_depend condition="$ROS_PYTHON_VERSION == 3">python3-serial</exec_depend>
 
   <export>
 

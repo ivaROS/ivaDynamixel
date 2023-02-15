@@ -1,0 +1,25 @@
+# dockerfile to build and run the dynamixel scripts in different environments
+version: "3.8"
+
+services:
+  kinetic: &base
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.kinetic
+    network_mode: host
+    volumes:
+      - ./:/app/src/ivaDynamixel/
+      - ./docker/bin:/app/bin/
+    devices:
+      - /dev/ttyUSB0
+    privileged: true
+  melodic:
+    <<: *base
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.melodic
+  noetic:
+    <<: *base
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.noetic

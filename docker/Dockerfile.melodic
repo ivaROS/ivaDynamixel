@@ -1,0 +1,21 @@
+FROM ros:melodic-ros-base-bionic
+
+RUN apt-get update && \
+    apt-get install -y \
+        apt-utils \
+        build-essential
+
+RUN apt-get install -y \
+    python-serial \
+    ros-melodic-control-msgs
+
+WORKDIR /app
+RUN mkdir src
+RUN /ros_entrypoint.sh catkin_make
+
+ADD docker/bin ./bin
+ADD . src/ivaDynamixel
+RUN rosdep install --from-paths src --ignore-src -r -y
+RUN /app/bin/ros_entrypoint.sh catkin_make
+
+ENTRYPOINT ["/app/bin/ros_entrypoint.sh", "stdbuf", "-o", "L"]

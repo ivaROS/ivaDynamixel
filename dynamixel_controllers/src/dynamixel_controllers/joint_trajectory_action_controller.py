@@ -100,7 +100,6 @@ class JointTrajectoryActionController:
         )
 
     def initialize(self):
-        self.joint_to_controller = {}
         ns = self.controller_namespace + "/joint_trajectory_action_node/constraints"
         self.goal_time_constraint = rospy.get_param(ns + "/goal_time", 0.0)
         self.stopped_velocity_tolerance = rospy.get_param(
@@ -354,11 +353,6 @@ class JointTrajectoryActionController:
                 multi_packet[port] = vals
 
             for port, vals in list(multi_packet.items()):
-                msg = "Trajectory execution successfully completed"
-                rospy.loginfo(msg)
-                res = FollowJointTrajectoryResult()
-                res.error_code = FollowJointTrajectoryResult.SUCCESSFUL
-                self.action_server.set_succeeded(result=res, text=msg)
                 self.port_to_io[port].set_multi_position_and_speed(vals)
 
             while time < seg_end_times[seg]:

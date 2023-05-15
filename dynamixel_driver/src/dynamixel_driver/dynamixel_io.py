@@ -92,7 +92,7 @@ class DynamixelIO(object):
         if self.readback_echo:
             self.ser.read(len(data))
 
-    def __read_response(self, servo_id):
+    def __read_response(self, servo_id):  # [TODO] Re-factor /w DXL 2.0 intfc
         data = []
 
         try:
@@ -120,7 +120,7 @@ class DynamixelIO(object):
 
         return data
 
-    def read(self, servo_id, address, size):
+    def read(self, servo_id, address, size):  # [TODO] Re-factor /w DXL 2.0 intfc
         """Read "size" bytes of data from servo with "servo_id" starting at the
         register with "address". "address" is an integer between 0 and 57. It is
         recommended to use the constants in module dynamixel_const for readability.
@@ -153,7 +153,7 @@ class DynamixelIO(object):
 
         return data
 
-    def write(self, servo_id, address, data):
+    def write(self, servo_id, address, data):  # [TODO] Re-factor /w DXL 2.0 intfc
         """Write the values from the "data" list to the servo with "servo_id"
         starting with data[0] at "address", continuing through data[n-1] at
         "address" + (n-1), where n = len(data). "address" is an integer between
@@ -192,7 +192,7 @@ class DynamixelIO(object):
 
         return data
 
-    def sync_write(self, address, data):
+    def sync_write(self, address, data):  # [TODO] Re-factor /w DXL 2.0 intfc
         """Use Broadcast message to send multiple servos instructions at the
         same time. No "status packet" will be returned from any servos.
         "address" is an integer between 0 and 49. It is recommended to use the
@@ -239,7 +239,7 @@ class DynamixelIO(object):
         with self.serial_mutex:
             self.__write_serial(packet)
 
-    def ping(self, servo_id):
+    def ping(self, servo_id):  # [TODO] Re-factor /w DXL 2.0 intfc
         """Ping the servo with "servo_id". This causes the servo to return a
         "status packet". This can tell us if the servo is attached and powered,
         and if so, if there are any errors.

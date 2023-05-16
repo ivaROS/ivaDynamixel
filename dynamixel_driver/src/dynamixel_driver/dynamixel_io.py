@@ -182,15 +182,16 @@ class DynamixelIO(object):
         # Number of bytes following standard header (0xFF, 0xFF, 0xFD, 0x00, id, length_l, length_h)
         length = 7  # instruction, address_l, address_h, size_l, size_h, crc_l, crc_h
 
-        # [TODO] data_blk = [ ... ], compute CRC, compile packet
+        # Data block
+        packet = [0xFF, 0xFF, 0xFD, 0x00, servo_id, DXL_LOBYTE(length), DXL_HIBYTE(length), DXL_READ_DATA]
+        packet.extend([DXL_LOBYTE(address), DXL_HIBYTE(address)])
+        packet.extend([DXL_LOBYTE(size), DXL_HIBYTE(size)])
 
-        # directly from AX-12 manual:
-        # Check Sum = ~ (ID + LENGTH + INSTRUCTION + PARAM_1 + ... + PARAM_N)
-        # If the calculated value is > 255, the lower byte is the check sum.
-        checksum = 255 - ((servo_id + length + DXL_READ_DATA + address + size) % 256)
+        # Compute checksum from data block
+        checksum = self.__update_crc(0, packet, len(data))
 
-        # packet: FF  FF  ID LENGTH INSTRUCTION PARAM_1 ... CHECKSUM
-        packet = [0xFF, 0xFF, servo_id, length, DXL_READ_DATA, address, size, checksum]
+        # Finish packet construction: FF  FF  ID LENGTH INSTRUCTION PARAM_1 ... CHECKSUM
+        packet.extend([DXL_LOBYTE(checksum), DXL_HIBYTE(checksum)])
 
         with self.serial_mutex:
             self.__write_serial(packet)
@@ -217,19 +218,16 @@ class DynamixelIO(object):
             write(1, DXL_GOAL_POSITION_L, (20, 1))
         """
         # Number of bytes following standard header (0xFF, 0xFF, id, length)
-        length = 3 + len(data)  # instruction, address, len(data), checksum
+        length = 5 + len(data)  # instruction, address_l, address_h, len(data), checksum_l, checksum_h
 
-        # directly from AX-12 manual:
-        # Check Sum = ~ (ID + LENGTH + INSTRUCTION + PARAM_1 + ... + PARAM_N)
-        # If the calculated value is > 255, the lower byte is the check sum.
-        checksum = 255 - (
-            (servo_id + length + DXL_WRITE_DATA + address + sum(data)) % 256
-        )
-
-        # packet: FF  FF  ID LENGTH INSTRUCTION PARAM_1 ... CHECKSUM
-        packet = [0xFF, 0xFF, servo_id, length, DXL_WRITE_DATA, address]
+        # Data block
+        packet = [0xFF, 0xFF, 0xFD, 0x00, servo_id, DXL_LOBYTE(length), DXL_HIBYTE(length), DXL_WRITE_DATA]
+        packet.extend([DXL_LOBYTE(address), DXL_HIBYTE(address)])
         packet.extend(data)
-        packet.append(checksum)
+
+        # Compute and append checksum bytes
+        checksum = self.__update_crc(0, packet, len(packet))
+        packet.extend([DXL_LOBYTE(checksum), DXL_HIBYTE(checksum)])
 
         with self.serial_mutex:
             self.__write_serial(packet)

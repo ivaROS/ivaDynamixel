@@ -131,19 +131,19 @@ class JointPositionController(JointController):
         )
         self.MIN_VELOCITY = self.VELOCITY_PER_TICK
 
-        if self.compliance_slope is not None:
-            self.set_compliance_slope(self.compliance_slope)
-        if self.compliance_margin is not None:
-            self.set_compliance_margin(self.compliance_margin)
-        if self.compliance_punch is not None:
-            self.set_compliance_punch(self.compliance_punch)
-        if self.torque_limit is not None:
-            self.set_torque_limit(self.torque_limit)
-        if self.acceleration is not None:
-            rospy.loginfo(
-                "Setting acceleration of %d to %d" % (self.motor_id, self.acceleration)
-            )
-            self.dxl_io.set_acceleration(self.motor_id, self.acceleration)
+#        if self.compliance_slope is not None:
+#            self.set_compliance_slope(self.compliance_slope)
+#        if self.compliance_margin is not None:
+#            self.set_compliance_margin(self.compliance_margin)
+#        if self.compliance_punch is not None:
+#            self.set_compliance_punch(self.compliance_punch)
+#        if self.torque_limit is not None:
+#            self.set_torque_limit(self.torque_limit)
+#        if self.acceleration is not None:
+#            rospy.loginfo(
+#                "Setting acceleration of %d to %d" % (self.motor_id, self.acceleration)
+#            )
+#            self.dxl_io.set_acceleration(self.motor_id, self.acceleration)
 
         self.joint_max_speed = rospy.get_param(
             self.controller_namespace + "/joint_max_speed", self.MAX_VELOCITY
@@ -159,7 +159,7 @@ class JointPositionController(JointController):
         elif self.joint_speed > self.joint_max_speed:
             self.joint_speed = self.joint_max_speed
 
-        # [AHC 20190506]: Unnecessarily causes torque enable (locking of motors to current positions)
+        # [AHC 20190506]: Annoyingly causes torque enable (locking of motors to current positions)
         # self.set_speed(self.joint_speed)
 
         return True

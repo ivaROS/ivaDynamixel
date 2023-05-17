@@ -179,7 +179,7 @@ class DynamixelIO(object):
         like:
             read(1, DXL_GOAL_POSITION_L, 2)
         """
-        # Number of bytes following standard header (0xFF, 0xFF, 0xFD, 0x00, id, length_l, length_h)
+        # Data block length: # of bytes following standard header (0xFF, 0xFF, 0xFD, 0x00, id, length_l, length_h)
         length = 7  # instruction, address_l, address_h, size_l, size_h, crc_l, crc_h
 
         # Data block
@@ -217,7 +217,7 @@ class DynamixelIO(object):
         like:
             write(1, DXL_GOAL_POSITION_L, (20, 1))
         """
-        # Number of bytes following standard header (0xFF, 0xFF, id, length)
+        # Data block length: # of bytes following standard header (0xFF, 0xFF, 0xFD, 0x00, id, length_l, length_h)
         length = 5 + len(data)  # instruction, address_l, address_h, len(data), checksum_l, checksum_h
 
         # Data block
@@ -255,36 +255,24 @@ class DynamixelIO(object):
         550, the method should be called like:
             sync_write(DXL_GOAL_POSITION_L, ( (1, 20, 1), (2 ,38, 2) ))
         """
-        # Calculate length and sum of all data
+        # Data: list of tuples -> each tuple = (servo_id, data1, data_2, ...)
         flattened = [value for servo in data for value in servo]
 
-        # Number of bytes following standard header (0xFF, 0xFF, id, length) plus data
-        length = 4 + len(flattened)
+        # Data block length: # of bytes following standard header (0xFF, 0xFF, 0xFD, 0x00, id, length_l, length_h)
+        # i.e., instruction, address_l, address_h, data_len_l, data_len_h, len(flattened), checksum_l, checksum_h
+        length = 7 + len(flattened) 
 
-        checksum = 255 - (
-            (
-                DXL_BROADCAST
-                + length
-                + DXL_SYNC_WRITE
-                + address
-                + len(data[0][1:])
-                + sum(flattened)
-            )
-            % 256
-        )
-
-        # packet: FF  FF  ID LENGTH INSTRUCTION PARAM_1 ... CHECKSUM
-        packet = [
-            0xFF,
-            0xFF,
-            DXL_BROADCAST,
-            length,
-            DXL_SYNC_WRITE,
-            address,
-            len(data[0][1:]),
-        ]
+        # Data block
+        packet = [0xFF, 0xFF, 0xFD, 0x00, DXL_BROADCAST, DXL_LOBYTE(length), DXL_HIBYTE(length), DXL_SYNC_WRITE]
+        packet.extend([DXL_LOBYTE(address), DXL_HIBYTE(address)])
+        servo_data_len = len(data[0][1:])   # per servo data len
+        packet.extend([DXL_LOBYTE(servo_data_len), DXL_HIBYTE(servo_data_len)])
+        
         packet.extend(flattened)
-        packet.append(checksum)
+        
+        # Compute and append checksum bytes
+        checksum = self.__update_crc(0, packet, len(packet))
+        packet.extend([DXL_LOBYTE(checksum), DXL_HIBYTE(checksum)])
 
         with self.serial_mutex:
             self.__write_serial(packet)
@@ -294,16 +282,15 @@ class DynamixelIO(object):
         "status packet". This can tell us if the servo is attached and powered,
         and if so, if there are any errors.
         """
-        # Number of bytes following standard header (0xFF, 0xFF, id, length)
-        length = 2  # instruction, checksum
+        # Data block length: # of bytes following standard header (0xFF, 0xFF, 0xFD, 0x00, id, length_l, length_h)
+        length = 3  # instruction, checksum_l, checksum_h
 
-        # directly from AX-12 manual:
-        # Check Sum = ~ (ID + LENGTH + INSTRUCTION + PARAM_1 + ... + PARAM_N)
-        # If the calculated value is > 255, the lower byte is the check sum.
-        checksum = 255 - ((servo_id + length + DXL_PING) % 256)
+        # Data block
+        packet = [0xFF, 0xFF, 0xFD, 0x00, servo_id, DXL_LOBYTE(length), DXL_HIBYTE(length), DXL_PING]
 
-        # packet: FF  FF  ID LENGTH INSTRUCTION CHECKSUM
-        packet = [0xFF, 0xFF, servo_id, length, DXL_PING, checksum]
+        # Compute and append checksum bytes
+        checksum = self.__update_crc(0, packet, len(packet))
+        packet.extend([DXL_LOBYTE(checksum), DXL_HIBYTE(checksum)])
 
         with self.serial_mutex:
             self.__write_serial(packet)
@@ -320,7 +307,7 @@ class DynamixelIO(object):
                 response = []
 
         if response:
-            self.exception_on_error(response[4], servo_id, "ping")
+            self.exception_on_error(response[8], servo_id, "ping")
         return response
 
     def test_bit(self, number, offset):
@@ -338,7 +325,7 @@ class DynamixelIO(object):
         """
         response = self.write(old_id, DXL_ID, [new_id])
         if response:
-            self.exception_on_error(response[4], old_id, "setting id to %d" % new_id)
+            self.exception_on_error(response[8], old_id, "setting id to %d" % new_id)
         return response
 
     def set_baud_rate(self, servo_id, baud_rate):
@@ -348,7 +335,7 @@ class DynamixelIO(object):
         response = self.write(servo_id, DXL_BAUD_RATE, [baud_rate])
         if response:
             self.exception_on_error(
-                response[4], servo_id, "setting baud rate to %d" % baud_rate
+                response[8], servo_id, "setting baud rate to %d" % baud_rate
             )
         return response
 
@@ -361,7 +348,7 @@ class DynamixelIO(object):
         response = self.write(servo_id, DXL_RETURN_DELAY_TIME, [delay])
         if response:
             self.exception_on_error(
-                response[4], servo_id, "setting return delay time to %d" % delay
+                response[8], servo_id, "setting return delay time to %d" % delay
             )
         return response
 
@@ -375,7 +362,7 @@ class DynamixelIO(object):
         response = self.write(servo_id, DXL_CW_ANGLE_LIMIT_L, (loVal, hiVal))
         if response:
             self.exception_on_error(
-                response[4], servo_id, "setting CW angle limits to %d" % angle_cw
+                response[8], servo_id, "setting CW angle limits to %d" % angle_cw
             )
         return response
 
@@ -389,7 +376,7 @@ class DynamixelIO(object):
         response = self.write(servo_id, DXL_CCW_ANGLE_LIMIT_L, (loVal, hiVal))
         if response:
             self.exception_on_error(
-                response[4], servo_id, "setting CCW angle limits to %d" % angle_ccw
+                response[8], servo_id, "setting CCW angle limits to %d" % angle_ccw
             )
         return response
 
@@ -408,7 +395,7 @@ class DynamixelIO(object):
         )
         if response:
             self.exception_on_error(
-                response[4],
+                response[8],
                 servo_id,
                 "setting CW and CCW angle limits to %d and %d" % (min_angle, max_angle),
             )
@@ -423,7 +410,7 @@ class DynamixelIO(object):
         response = self.write(servo_id, DXL_DRIVE_MODE, [drive_mode])
         if response:
             self.exception_on_error(
-                response[4], servo_id, "setting drive mode to %d" % drive_mode
+                response[8], servo_id, "setting drive mode to %d" % drive_mode
             )
         return response
 
@@ -440,7 +427,7 @@ class DynamixelIO(object):
         response = self.write(servo_id, DXL_DOWN_LIMIT_VOLTAGE, [minVal])
         if response:
             self.exception_on_error(
-                response[4],
+                response[8],
                 servo_id,
                 "setting minimum voltage level to %d" % min_voltage,
             )
@@ -459,7 +446,7 @@ class DynamixelIO(object):
         response = self.write(servo_id, DXL_UP_LIMIT_VOLTAGE, [maxVal])
         if response:
             self.exception_on_error(
-                response[4],
+                response[8],
                 servo_id,
                 "setting maximum voltage level to %d" % max_voltage,
             )
@@ -482,7 +469,7 @@ class DynamixelIO(object):
         response = self.write(servo_id, DXL_DOWN_LIMIT_VOLTAGE, (minVal, maxVal))
         if response:
             self.exception_on_error(
-                response[4],
+                response[8],
                 servo_id,
                 "setting min and max voltage levels to %d and %d"
                 % (min_voltage, max_voltage),
@@ -502,7 +489,7 @@ class DynamixelIO(object):
         response = self.write(servo_id, DXL_TORQUE_ENABLE, [enabled])
         if response:
             self.exception_on_error(
-                response[4], servo_id, "%sabling torque" % "en" if enabled else "dis"
+                response[8], servo_id, "%sabling torque" % "en" if enabled else "dis"
             )
         return response
 
@@ -515,7 +502,7 @@ class DynamixelIO(object):
         response = self.write(servo_id, DXL_CW_COMPLIANCE_MARGIN, [margin])
         if response:
             self.exception_on_error(
-                response[4], servo_id, "setting CW compliance margin to %d" % margin
+                response[8], servo_id, "setting CW compliance margin to %d" % margin
             )
         return response
 
@@ -528,7 +515,7 @@ class DynamixelIO(object):
         response = self.write(servo_id, DXL_CCW_COMPLIANCE_MARGIN, [margin])
         if response:
             self.exception_on_error(
-                response[4], servo_id, "setting CCW compliance margin to %d" % margin
+                response[8], servo_id, "setting CCW compliance margin to %d" % margin
             )
         return response
 
@@ -543,7 +530,7 @@ class DynamixelIO(object):
         )
         if response:
             self.exception_on_error(
-                response[4],
+                response[8],
                 servo_id,
                 "setting CW and CCW compliance margins to values %d and %d"
                 % (margin_cw, margin_ccw),
@@ -558,7 +545,7 @@ class DynamixelIO(object):
         response = self.write(servo_id, DXL_CW_COMPLIANCE_SLOPE, [slope])
         if response:
             self.exception_on_error(
-                response[4], servo_id, "setting CW compliance slope to %d" % slope
+                response[8], servo_id, "setting CW compliance slope to %d" % slope
             )
         return response
 
@@ -570,7 +557,7 @@ class DynamixelIO(object):
         response = self.write(servo_id, DXL_CCW_COMPLIANCE_SLOPE, [slope])
         if response:
             self.exception_on_error(
-                response[4], servo_id, "setting CCW compliance slope to %d" % slope
+                response[8], servo_id, "setting CCW compliance slope to %d" % slope
             )
         return response
 
@@ -582,7 +569,7 @@ class DynamixelIO(object):
         response = self.write(servo_id, DXL_CW_COMPLIANCE_SLOPE, (slope_cw, slope_ccw))
         if response:
             self.exception_on_error(
-                response[4],
+                response[8],
                 servo_id,
                 "setting CW and CCW compliance slopes to %d and %d"
                 % (slope_cw, slope_ccw),
@@ -597,7 +584,7 @@ class DynamixelIO(object):
         response = self.write(servo_id, DXL_D_GAIN, [d_gain])
         if response:
             self.exception_on_error(
-                response[4],
+                response[8],
                 servo_id,
                 "setting D gain value of PID controller to %d" % d_gain,
             )
@@ -611,7 +598,7 @@ class DynamixelIO(object):
         response = self.write(servo_id, DXL_I_GAIN, [i_gain])
         if response:
             self.exception_on_error(
-                response[4],
+                response[8],
                 servo_id,
                 "setting I gain value of PID controller to %d" % i_gain,
             )
@@ -625,7 +612,7 @@ class DynamixelIO(object):
         response = self.write(servo_id, DXL_P_GAIN, [p_gain])
         if response:
             self.exception_on_error(
-                response[4],
+                response[8],
                 servo_id,
                 "setting P gain value of PID controller to %d" % p_gain,
             )
@@ -643,7 +630,7 @@ class DynamixelIO(object):
         response = self.write(servo_id, DXL_PUNCH_L, (loVal, hiVal))
         if response:
             self.exception_on_error(
-                response[4], servo_id, "setting punch to %d" % punch
+                response[8], servo_id, "setting punch to %d" % punch
             )
         return response
 
@@ -661,7 +648,7 @@ class DynamixelIO(object):
             response = self.write(servo_id, DXL_GOAL_ACCELERATION, (acceleration,))
             if response:
                 self.exception_on_error(
-                    response[4], servo_id, "setting acceleration to %d" % acceleration
+                    response[8], servo_id, "setting acceleration to %d" % acceleration
                 )
             return response
         else:
@@ -678,7 +665,7 @@ class DynamixelIO(object):
         response = self.write(servo_id, DXL_GOAL_POSITION_L, (loVal, hiVal))
         if response:
             self.exception_on_error(
-                response[4], servo_id, "setting goal position to %d" % position
+                response[8], servo_id, "setting goal position to %d" % position
             )
         return response
 
@@ -699,7 +686,7 @@ class DynamixelIO(object):
         response = self.write(servo_id, DXL_GOAL_SPEED_L, (loVal, hiVal))
         if response:
             self.exception_on_error(
-                response[4], servo_id, "setting moving speed to %d" % speed
+                response[8], servo_id, "setting moving speed to %d" % speed
             )
         return response
 
@@ -716,7 +703,7 @@ class DynamixelIO(object):
         response = self.write(servo_id, DXL_TORQUE_LIMIT_L, (loVal, hiVal))
         if response:
             self.exception_on_error(
-                response[4], servo_id, "setting torque limit to %d" % torque
+                response[8], servo_id, "setting torque limit to %d" % torque
             )
         return response
 
@@ -742,13 +729,13 @@ class DynamixelIO(object):
                 response = self.write(servo_id, DXL_GOAL_TORQUE_L, (loVal, hiVal))
                 if response:
                     self.exception_on_error(
-                        response[4], servo_id, "setting goal torque to %d" % torque
+                        response[8], servo_id, "setting goal torque to %d" % torque
                     )
             response = self.write(
                 servo_id, DXL_TORQUE_CONTROL_MODE, (int(valid_torque),)
             )
             if response:
-                self.exception_on_error(response[4], servo_id, "enabling torque mode")
+                self.exception_on_error(response[8], servo_id, "enabling torque mode")
             return response
         else:
             raise UnsupportedFeatureError(model, DXL_TORQUE_CONTROL_MODE)
@@ -777,7 +764,7 @@ class DynamixelIO(object):
         )
         if response:
             self.exception_on_error(
-                response[4],
+                response[8],
                 servo_id,
                 "setting goal position to %d and moving speed to %d"
                 % (position, speed),
@@ -794,7 +781,7 @@ class DynamixelIO(object):
         response = self.write(servo_id, DXL_LED, [led_state])
         if response:
             self.exception_on_error(
-                response[4], servo_id, "setting a LED to %s" % led_state
+                response[8], servo_id, "setting a LED to %s" % led_state
             )
         return response
 
@@ -880,7 +867,7 @@ class DynamixelIO(object):
         # use sync write to broadcast multi servo message
         self.sync_write(DXL_PUNCH_L, writeableVals)
 
-    def set_multi_position(self, valueTuples):
+    def set_multi_position(self, valueTuples):  # [TODO] Re-factor /w DXL 2.0 intfc
         """
         Set different positions for multiple servos.
         Should be called as such:
@@ -980,40 +967,40 @@ class DynamixelIO(object):
     # Servo status access functions #
     #################################
 
-    def get_model_number(self, servo_id):
+    def get_model_number(self, servo_id):   # [TODO] Re-factor /w DXL 2.0 intfc
         """Reads the servo's model number (e.g. 12 for AX-12+)."""
         response = self.read(servo_id, DXL_MODEL_NUMBER_L, 2)
         if response:
-            self.exception_on_error(response[4], servo_id, "fetching model number")
-        return response[5] + (response[6] << 8)
+            self.exception_on_error(response[8], servo_id, "fetching model number")
+        return response[9] + (response[10] << 8)
 
-    def get_firmware_version(self, servo_id):
+    def get_firmware_version(self, servo_id):   # [TODO] Re-factor /w DXL 2.0 intfc
         """Reads the servo's firmware version."""
         response = self.read(servo_id, DXL_VERSION, 1)
         if response:
-            self.exception_on_error(response[4], servo_id, "fetching firmware version")
-        return response[5]
+            self.exception_on_error(response[8], servo_id, "fetching firmware version")
+        return response[9]
 
-    def get_return_delay_time(self, servo_id):
+    def get_return_delay_time(self, servo_id):   # [TODO] Re-factor /w DXL 2.0 intfc
         """Reads the servo's return delay time."""
         response = self.read(servo_id, DXL_RETURN_DELAY_TIME, 1)
         if response:
-            self.exception_on_error(response[4], servo_id, "fetching return delay time")
-        return response[5]
+            self.exception_on_error(response[8], servo_id, "fetching return delay time")
+        return response[9]
 
-    def get_angle_limits(self, servo_id):
+    def get_angle_limits(self, servo_id):   # [TODO] Re-factor /w DXL 2.0 intfc
         """
         Returns the min and max angle limits from the specified servo.
         """
         # read in 4 consecutive bytes starting with low value of clockwise angle limit
-        response = self.read(servo_id, DXL_CW_ANGLE_LIMIT_L, 4)
+        response = self.read(servo_id, DXL_MAX_POS_LIMIT_L, 8)
         if response:
             self.exception_on_error(
-                response[4], servo_id, "fetching CW/CCW angle limits"
+                response[8], servo_id, "fetching CW/CCW angle limits"
             )
         # extract data valus from the raw data
-        cwLimit = response[5] + (response[6] << 8)
-        ccwLimit = response[7] + (response[8] << 8)
+        ccwLimit = response[9] + (response[10] << 8) + (response[11] << 16) + (response[12] << 32)
+        cwLimit = response[13] + (response[14] << 8) + (response[15] << 16) + (response[16] << 32)
 
         # return the data in a dictionary
         return {"min": cwLimit, "max": ccwLimit}
@@ -1022,47 +1009,47 @@ class DynamixelIO(object):
         """Reads the servo's drive mode."""
         response = self.read(servo_id, DXL_DRIVE_MODE, 1)
         if response:
-            self.exception_on_error(response[4], servo_id, "fetching drive mode")
+            self.exception_on_error(response[8], servo_id, "fetching drive mode")
         return response[5]
 
-    def get_voltage_limits(self, servo_id):
+    def get_voltage_limits(self, servo_id):   # [TODO] Re-factor /w DXL 2.0 intfc
         """
         Returns the min and max voltage limits from the specified servo.
         """
-        response = self.read(servo_id, DXL_DOWN_LIMIT_VOLTAGE, 2)
+        response = self.read(servo_id, DXL_UP_LIMIT_VOLTAGE, 4)
         if response:
-            self.exception_on_error(response[4], servo_id, "fetching voltage limits")
+            self.exception_on_error(response[8], servo_id, "fetching voltage limits")
         # extract data valus from the raw data
-        min_voltage = response[5] / 10.0
-        max_voltage = response[6] / 10.0
+        max_voltage = (response[9] + (response[10] << 8)) / 10.0
+        min_voltage = (response[11] + (response[12] << 8)) / 10.0
 
         # return the data in a dictionary
         return {"min": min_voltage, "max": max_voltage}
 
-    def get_position(self, servo_id):
+    def get_position(self, servo_id):   # [TODO] Re-factor /w DXL 2.0 intfc
         """Reads the servo's position value from its registers."""
         response = self.read(servo_id, DXL_PRESENT_POSITION_L, 2)
         if response:
-            self.exception_on_error(response[4], servo_id, "fetching present position")
-        position = response[5] + (response[6] << 8)
+            self.exception_on_error(response[8], servo_id, "fetching present position")
+        position = response[9] + (response[10] << 8) + (response[11] << 16) + (response[12] << 32)
         return position
 
     def get_speed(self, servo_id):
         """Reads the servo's speed value from its registers."""
         response = self.read(servo_id, DXL_PRESENT_SPEED_L, 2)
         if response:
-            self.exception_on_error(response[4], servo_id, "fetching present speed")
+            self.exception_on_error(response[8], servo_id, "fetching present speed")
         speed = response[5] + (response[6] << 8)
         if speed > 1023:
             return 1023 - speed
         return speed
 
-    def get_voltage(self, servo_id):
+    def get_voltage(self, servo_id):   # [TODO] Re-factor /w DXL 2.0 intfc
         """Reads the servo's voltage."""
-        response = self.read(servo_id, DXL_PRESENT_VOLTAGE, 1)
+        response = self.read(servo_id, DXL_PRESENT_VOLTAGE, 2)
         if response:
-            self.exception_on_error(response[4], servo_id, "fetching supplied voltage")
-        return response[5] / 10.0
+            self.exception_on_error(response[8], servo_id, "fetching supplied voltage")
+        return (response[9] + (response[10] << 8)) / 10.0
 
     def get_current(self, servo_id):
         """Reads the servo's current consumption (if supported by model)"""
@@ -1074,7 +1061,7 @@ class DynamixelIO(object):
             response = self.read(servo_id, DXL_CURRENT_L, 2)
             if response:
                 self.exception_on_error(
-                    response[4], servo_id, "fetching sensed current"
+                    response[8], servo_id, "fetching sensed current"
                 )
             current = response[5] + (response[6] << 8)
             return 0.0045 * (current - 2048)
@@ -1083,7 +1070,7 @@ class DynamixelIO(object):
             response = self.read(servo_id, DXL_SENSED_CURRENT_L, 2)
             if response:
                 self.exception_on_error(
-                    response[4], servo_id, "fetching sensed current"
+                    response[8], servo_id, "fetching sensed current"
                 )
             current = response[5] + (response[6] << 8)
             return 0.01 * (current - 512)
@@ -1091,32 +1078,32 @@ class DynamixelIO(object):
         else:
             raise UnsupportedFeatureError(model, DXL_CURRENT_L)
 
-    def get_feedback(self, servo_id):
+    def get_feedback(self, servo_id):   # [TODO] Re-factor /w DXL 2.0 intfc
         """
         Returns the id, goal, position, error, speed, load, voltage, temperature
         and moving values from the specified servo.
         """
         # read in 17 consecutive bytes starting with low value for goal position
-        response = self.read(servo_id, DXL_GOAL_POSITION_L, 17)
+        response = self.read(servo_id, DXL_GOAL_POSITION_L, 20)   # goal position -> present position
 
         if response:
-            self.exception_on_error(response[4], servo_id, "fetching full servo status")
-        if len(response) == 24:
+            self.exception_on_error(response[8], servo_id, "fetching full servo status")
+        if len(response) == 32:  # 20 (data) + 11 (header->len_h, crc_l, crc_h) + 1 (timestamp from read())
             # extract data values from the raw data
-            goal = response[5] + (response[6] << 8)
-            position = response[11] + (response[12] << 8)
+            goal = response[9] + (response[10] << 8) + (response[11] << 16) + (response[12] << 32)
+            position = response[25] + (response[26] << 8) + (response[27] << 16) + (response[28] << 32)
             error = position - goal
-            speed = response[13] + (response[14] << 8)
+            speed = response[21] + (response[22] << 8) + (response[23] << 16) + (response[24] << 32)
             if speed > 1023:
-                speed = 1023 - speed
-            load_raw = response[15] + (response[16] << 8)
-            load_direction = 1 if self.test_bit(load_raw, 10) else 0
+                speed = 1023 - speed  # [TODO]
+            load_raw = response[19] + (response[20] << 8)
+            load_direction = 1 if self.test_bit(load_raw, 10) else 0  # [TODO]
             load = (load_raw & int("1111111111", 2)) / 1024.0
             if load_direction == 1:
                 load = -load
-            voltage = response[17] / 10.0
-            temperature = response[18]
-            moving = response[21]
+            voltage = 0   # [TODO] 
+            temperature = 0   # [TODO]
+            moving = response[15]
             timestamp = response[-1]
 
             # return the data in a dictionary
@@ -1141,7 +1128,7 @@ class DynamixelIO(object):
         """
         response = self.read(servo_id, DXL_LED, 1)
         if response:
-            self.exception_on_error(response[4], servo_id, "fetching LED status")
+            self.exception_on_error(response[8], servo_id, "fetching LED status")
 
         return bool(response[5])
 

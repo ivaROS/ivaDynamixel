@@ -1143,29 +1143,29 @@ class DynamixelIO(object):
         )
 
         if not isinstance(error_code, int):
-            msg = "Communcation Error " + ex_message
+            msg = "Communication Error " + ex_message
             exception = NonfatalErrorCodeError(msg, 0)
             return
-        if not error_code & DXL_OVERHEATING_ERROR == 0:
-            msg = "Overheating Error " + ex_message
+        if error_code == DXL_ACCESS_ERROR:
+            msg = "Address Access Error " + ex_message
             exception = FatalErrorCodeError(msg, error_code)
-        if not error_code & DXL_OVERLOAD_ERROR == 0:
-            msg = "Overload Error " + ex_message
+        if error_code == DXL_DATA_LIMIT_ERROR:
+            msg = "Data Limit Error " + ex_message
             exception = FatalErrorCodeError(msg, error_code)
-        if not error_code & DXL_INPUT_VOLTAGE_ERROR == 0:
-            msg = "Input Voltage Error " + ex_message
+        if error_code == DXL_DATA_LENGTH_ERROR:
+            msg = "Data Required Length Error " + ex_message
             exception = NonfatalErrorCodeError(msg, error_code)
-        if not error_code & DXL_ANGLE_LIMIT_ERROR == 0:
-            msg = "Angle Limit Error " + ex_message
+        if error_code == DXL_RANGE_ERROR:
+            msg = "Data Allowable Range Error " + ex_message
             exception = NonfatalErrorCodeError(msg, error_code)
-        if not error_code & DXL_RANGE_ERROR == 0:
-            msg = "Range Error " + ex_message
+        if error_code == DXL_CHECKSUM_ERROR:
+            msg = "Packet CRC Error " + ex_message
             exception = NonfatalErrorCodeError(msg, error_code)
-        if not error_code & DXL_CHECKSUM_ERROR == 0:
-            msg = "Checksum Error " + ex_message
-            exception = NonfatalErrorCodeError(msg, error_code)
-        if not error_code & DXL_INSTRUCTION_ERROR == 0:
+        if error_code == DXL_INSTRUCTION_ERROR:
             msg = "Instruction Error " + ex_message
+            exception = NonfatalErrorCodeError(msg, error_code)
+        if error_code == DXL_RESULT_FAIL_ERROR:
+            msg = "Result Failed Error " + ex_message
             exception = NonfatalErrorCodeError(msg, error_code)
 
 

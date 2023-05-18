@@ -85,6 +85,12 @@ class DynamixelIO(object):
             self.ser.flushOutput()
             self.ser.close()
 
+    def __print_packet(self, packet):
+        for ii in range(len(packet)):
+          print('{} '.format(hex(packet[ii])))
+        print('\n')
+
+
     def __write_serial(self, packet):
         data = array("B", packet)
         self.ser.flushInput()
@@ -229,6 +235,8 @@ class DynamixelIO(object):
         checksum = self.__update_crc(0, packet, len(packet))
         packet.extend([DXL_LOBYTE(checksum), DXL_HIBYTE(checksum)])
 
+        self.__print_packet(packet)     # [DEBUG]
+
         with self.serial_mutex:
             self.__write_serial(packet)
 
@@ -282,6 +290,8 @@ class DynamixelIO(object):
         "status packet". This can tell us if the servo is attached and powered,
         and if so, if there are any errors.
         """
+        self.set_led(servo_id, 1)
+        
         # Data block length: # of bytes following standard header (0xFF, 0xFF, 0xFD, 0x00, id, length_l, length_h)
         length = 3  # instruction, checksum_l, checksum_h
 

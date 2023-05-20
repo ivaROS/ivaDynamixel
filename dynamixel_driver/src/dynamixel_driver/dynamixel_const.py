@@ -343,7 +343,7 @@ DXL_MODEL_TO_PARAMS = {
         "range_degrees": 360.0,
         "torque_per_volt": 4.1 / 12.0,  #  8.4 NM @ 12V
         "velocity_per_volt": (46 * RPM_TO_RADSEC) / 12.0,  #  45 RPM @ 12.0V
-        "rpm_per_tick": 1./4096,    # [TODO] double check how compute???
+        "rpm_per_tick": 0.229,    # [TODO] double check how compute???
         "features": [DXL_CURRENT_L],    # [TODO] re-eval later
 #        "features": [DXL_CURRENT_L, DXL_TORQUE_CONTROL_MODE, DXL_GOAL_ACCELERATION],
     },

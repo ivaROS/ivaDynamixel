@@ -87,9 +87,8 @@ class DynamixelIO(object):
 
     def __print_packet(self, packet):
         for ii in range(len(packet)):
-          print('{} '.format(hex(packet[ii])))
-        print('\n')
-
+          print("{:02x} ".format(packet[ii]), end="")
+        print("\n")
 
     def __write_serial(self, packet):
         data = array("B", packet)
@@ -152,9 +151,13 @@ class DynamixelIO(object):
         try:
             # read the header to check how many more bytes to read
             buf = self.ser.read(7)
-            data += struct.unpack("<4B", buf)
+            data += struct.unpack("<7B", buf)
 
             # throw an exception if we have the wrong number of bytes
+            if len(data) < 7:
+                raise Exception("Wrong packet preamble length %d (preamble: %s)" % (len(data), data))
+
+            # throw an exception if expected header not recieved
             if data[:4] != [0xFF, 0xFF, 0xFD, 0x00]:
                 raise Exception("Wrong packet prefix %s" % data[:4])
 
@@ -170,8 +173,8 @@ class DynamixelIO(object):
 
         # verify checksum
         checksum_rcvd = DXL_MAKEWORD(data[-2], data[-1])
-        checksum_recomp = self.__update_crc(0, data[0:-2], len(data) - 2)
-        if not checksum_rcvd == checksum_recomp:
+        checksum_recomputed = self.__update_crc(0, data[0:-2], len(data) - 2)
+        if not checksum_rcvd == checksum_recomputed:
             raise ChecksumError(servo_id, data, checksum_rcvd)
 
         return data
@@ -194,10 +197,11 @@ class DynamixelIO(object):
         packet.extend([DXL_LOBYTE(size), DXL_HIBYTE(size)])
 
         # Compute checksum from data block
-        checksum = self.__update_crc(0, packet, len(data))
+        checksum = self.__update_crc(0, packet, len(packet))
 
         # Finish packet construction: FF  FF  ID LENGTH INSTRUCTION PARAM_1 ... CHECKSUM
         packet.extend([DXL_LOBYTE(checksum), DXL_HIBYTE(checksum)])
+        #self.__print_packet(packet)  # [DEBUG]
 
         with self.serial_mutex:
             self.__write_serial(packet)
@@ -235,7 +239,7 @@ class DynamixelIO(object):
         checksum = self.__update_crc(0, packet, len(packet))
         packet.extend([DXL_LOBYTE(checksum), DXL_HIBYTE(checksum)])
 
-        self.__print_packet(packet)     # [DEBUG]
+        #self.__print_packet(packet)     # [DEBUG]
 
         with self.serial_mutex:
             self.__write_serial(packet)
@@ -282,6 +286,8 @@ class DynamixelIO(object):
         checksum = self.__update_crc(0, packet, len(packet))
         packet.extend([DXL_LOBYTE(checksum), DXL_HIBYTE(checksum)])
 
+        #self.__print_packet(packet)
+
         with self.serial_mutex:
             self.__write_serial(packet)
 
@@ -290,8 +296,6 @@ class DynamixelIO(object):
         "status packet". This can tell us if the servo is attached and powered,
         and if so, if there are any errors.
         """
-        self.set_led(servo_id, 1)
-        
         # Data block length: # of bytes following standard header (0xFF, 0xFF, 0xFD, 0x00, id, length_l, length_h)
         length = 3  # instruction, checksum_l, checksum_h
 
@@ -889,10 +893,10 @@ class DynamixelIO(object):
         for vals in valueTuples:
             sid = vals[0]
             position = vals[1]
-            # split position into 2 bytes
-            loVal = int(position % 256)
-            hiVal = int(position >> 8)
-            writeableVals.append((sid, loVal, hiVal))
+            # split position into 4 bytes
+            pos_loword = DXL_LOWORD(position)
+            pos_hiword = DXL_HIWORD(position)            
+            writeableVals.append((sid, DXL_LOBYTE(pos_loword), DXL_HIBYTE(pos_loword), DXL_LOBYTE(pos_hiword), DXL_HIBYTE(pos_hiword)))
 
         # use sync write to broadcast multi servo message
         self.sync_write(DXL_GOAL_POSITION_L, writeableVals)
@@ -1100,12 +1104,14 @@ class DynamixelIO(object):
             self.exception_on_error(response[8], servo_id, "fetching full servo status")
         if len(response) == 32:  # 20 (data) + 11 (header->len_h, crc_l, crc_h) + 1 (timestamp from read())
             # extract data values from the raw data
-            goal = response[9] + (response[10] << 8) + (response[11] << 16) + (response[12] << 32)
-            position = response[25] + (response[26] << 8) + (response[27] << 16) + (response[28] << 32)
+            goal = response[9] + (response[10] << 8) + (response[11] << 16) + (response[12] << 24)
+            position = response[25] + (response[26] << 8) + (response[27] << 16) + (response[28] << 24)
             error = position - goal
-            speed = response[21] + (response[22] << 8) + (response[23] << 16) + (response[24] << 32)
-            if speed > 1023:
-                speed = 1023 - speed  # [TODO]
+            speed_binary = response[21] + (response[22] << 8) + (response[23] << 16) + (response[24] << 24)
+            if (speed_binary & 0x80000000):     # convert to appropriate signed int32 value
+              speed = -(speed_binary >> 31)*(2**31) + (speed_binary & 0x7fffffff) + 1     # 2's complement representation -> signed int
+            else:
+              speed = speed_binary
             load_raw = response[19] + (response[20] << 8)
             load_direction = 1 if self.test_bit(load_raw, 10) else 0  # [TODO]
             load = (load_raw & int("1111111111", 2)) / 1024.0
@@ -1140,7 +1146,7 @@ class DynamixelIO(object):
         if response:
             self.exception_on_error(response[8], servo_id, "fetching LED status")
 
-        return bool(response[5])
+        return bool(response[9])
 
     def exception_on_error(self, error_code, servo_id, command_failed):
         global exception

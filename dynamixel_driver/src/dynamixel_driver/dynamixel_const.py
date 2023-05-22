@@ -47,7 +47,7 @@ Dynamixel Constants
 
 # Control Table Constants
 #   === EEPROM AREA === 
-DXL_MODEL_NUMBER_L = 0
+DXL_MODEL_NUMBER = 0
 DXL_MODEL_INFO = 2
 DXL_VERSION = 6
 DXL_ID = 7
@@ -66,15 +66,15 @@ DXL_HOMING_OFFSET = 20
 DXL_MOVING_THRESHOLD = 24
 DXL_LIMIT_TEMPERATURE = 31
 
-DXL_UP_LIMIT_VOLTAGE = 32
-DXL_DOWN_LIMIT_VOLTAGE = 34
+DXL_MAX_VOLTAGE_LIMIT = 32
+DXL_MIN_VOLTAGE_LIMIT = 34
 
 DXL_PWM_LIMIT = 36
 DXL_CURRENT_LIMIT = 38
 DXL_VELOCITY_LIMIT = 44
 
-DXL_MAX_POS_LIMIT_L = 48
-DXL_MIN_POS_LIMIT_L = 52
+DXL_MAX_POS_LIMIT = 48
+DXL_MIN_POS_LIMIT = 52
 
 DXL_STARTUP_CONFIG = 60
 DXL_ALARM_SHUTDOWN = 63
@@ -93,7 +93,7 @@ DXL_LED = 65
 #DXL_CW_COMPLIANCE_SLOPE = 28
 #DXL_CCW_COMPLIANCE_SLOPE = 29
 
-DXL_RETURN_LEVEL = 68
+DXL_STATUS_RETURN_LEVEL = 68
 DXL_REGISTERED_INSTRUCTION = 69
 DXL_HW_ERROR_STATUS = 70
 
@@ -111,12 +111,12 @@ DXL_BUS_WATCHDOG = 98
 
 DXL_GOAL_PWM = 100
 DXL_GOAL_CURRENT = 102
-DXL_GOAL_SPEED_L = 104
+DXL_GOAL_VELOCITY = 104
 
 DXL_PROFILE_ACCELERATION = 108
 DXL_PROFILE_VELOCITY = 112
 
-DXL_GOAL_POSITION_L = 116
+DXL_GOAL_POSITION = 116
 
 DXL_REALTIME_TICK = 120
 
@@ -124,9 +124,10 @@ DXL_MOVING = 122
 DXL_MOVING_STATUS = 123
 
 DXL_PRESENT_PWM = 124
-DXL_CURRENT_L = 126
-DXL_PRESENT_SPEED_L = 128
-DXL_PRESENT_POSITION_L = 132
+DXL_PRESENT_LOAD = 126        # for MX-28(2.0)
+DXL_PRESENT_CURRENT = 126     # for other motor modele, e.g. MX-64(2.0), MX-106(2.0), XM430-W350
+DXL_PRESENT_VELOCITY = 128
+DXL_PRESENT_POSITION = 132
 
 DXL_VELOCITY_TRAJECTORY = 136
 DXL_POSITION_TRAJECTORY = 140
@@ -141,10 +142,10 @@ DXL_BACKUP_READY = 147
 #DXL_PAUSE_TIME = 45
 #DXL_LOCK = 47
 #DXL_PUNCH_L = 48
-DXL_SENSED_CURRENT_L = 56  # For EX-106; [TODO] uncommented just to allow code to run 
-DXL_TORQUE_CONTROL_MODE = 70
+#DXL_SENSED_CURRENT_L = 56  # For EX-106 [TODO]
+#DXL_TORQUE_CONTROL_MODE = 70  # [TODO]
 #DXL_GOAL_TORQUE_L = 71
-DXL_GOAL_ACCELERATION = 73
+#DXL_GOAL_ACCELERATION = 73 # [TODO]
 
 # Status Return Levels
 DXL_RETURN_NONE = 0
@@ -158,7 +159,17 @@ DXL_WRITE_DATA = 3
 DXL_REG_WRITE = 4
 DXL_ACTION = 5
 DXL_RESET = 6
+DXL_REBOOT = 8
+DXL_CLEAR = 16
+DXL_STATUS_RETURN = 85
 DXL_SYNC_WRITE = 131
+#   [NOTE] Currently unsupported instructions: 
+#     Control Table Back-up (0x20)
+#     Sync Read (0x82)
+#     Fast Sync Read (0x8A)
+#     Bulk Read (0x92)
+#     Bulk Write (0x93)
+#     Fast Bulk Read (0x9A)
 
 # Broadcast Constant
 DXL_BROADCAST = 254
@@ -174,18 +185,18 @@ DXL_RESULT_FAIL_ERROR = 1
 DXL_NO_ERROR = 0
 
 # Static parameters
-DXL_MIN_COMPLIANCE_MARGIN = 0
+DXL_MIN_COMPLIANCE_MARGIN = 0     # [TODO] Remove in: joint_controller.py, joint_position_controller_dual_motor.py, joint_position_controller.py, joint_torque_controller_dual_motor.py, joint_torque_controller.py
 DXL_MAX_COMPLIANCE_MARGIN = 255
 
-DXL_MIN_COMPLIANCE_SLOPE = 1
+DXL_MIN_COMPLIANCE_SLOPE = 1     # [TODO] Remove in: joint_controller.py, joint_position_controller_dual_motor.py, joint_position_controller.py, joint_torque_controller_dual_motor.py, joint_torque_controller.py
 DXL_MAX_COMPLIANCE_SLOPE = 254
 
 # These are guesses as Dynamixel documentation doesn't have any info about it
-DXL_MIN_PUNCH = 0
+DXL_MIN_PUNCH = 0     # [TODO] Remove in: joint_controller.py, joint_position_controller_dual_motor.py, joint_position_controller.py, joint_torque_controller_dual_motor.py, joint_torque_controller.py
 DXL_MAX_PUNCH = 255
 
-DXL_MAX_SPEED_TICK = 1023  # maximum speed in encoder units
-DXL_MAX_TORQUE_TICK = 1023  # maximum torque in encoder units
+DXL_MAX_SPEED_TICK = 1023  # maximum speed in encoder units   [TODO] not used by code base; remove
+DXL_MAX_TORQUE_TICK = 1023  # maximum torque in encoder units   [TODO] Revise in: joint_position_controller_dual_motor.py, joint_position_controller.py, joint_torque_controller_dual_motor.py, joint_torque_controller.py (specific to MX-28 only?)
 
 KGCM_TO_NM = 0.0980665  # 1 kg-cm is that many N-m
 RPM_TO_RADSEC = 0.104719755  # 1 RPM is that many rad/sec
@@ -193,149 +204,32 @@ RPM_TO_RADSEC = 0.104719755  # 1 RPM is that many rad/sec
 # maximum holding torque is in N-m per volt
 # maximum velocity is in rad/sec per volt
 DXL_MODEL_TO_PARAMS = {
-    113: {
-        "name": "DX-113",
-        "encoder_resolution": 1024,
-        "range_degrees": 300.0,
-        "torque_per_volt": 1.0 / 12.0,  #  1.0 NM @ 12V
-        "velocity_per_volt": (54 * RPM_TO_RADSEC) / 12.0,  #  54 RPM @ 12V
-        "rpm_per_tick": 0.111,
-        "features": [],
-    },
-    116: {
-        "name": "DX-116",
-        "encoder_resolution": 1024,
-        "range_degrees": 300.0,
-        "torque_per_volt": 2.1 / 12.0,  #  2.1 NM @ 12V
-        "velocity_per_volt": (78 * RPM_TO_RADSEC) / 12.0,  #  78 RPM @ 12V
-        "rpm_per_tick": 0.111,
-        "features": [],
-    },
-    117: {
-        "name": "DX-117",
-        "encoder_resolution": 1024,
-        "range_degrees": 300.0,
-        "torque_per_volt": 3.7 / 18.5,  #  3.7 NM @ 18.5V
-        "velocity_per_volt": (85 * RPM_TO_RADSEC) / 18.5,  #  85 RPM @ 18.5V
-        "rpm_per_tick": 0.111,
-        "features": [],
-    },
-    12: {
-        "name": "AX-12",
-        "encoder_resolution": 1024,
-        "range_degrees": 300.0,
-        "torque_per_volt": 1.5 / 12.0,  #  1.5 NM @ 12V
-        "velocity_per_volt": (59 * RPM_TO_RADSEC) / 12.0,  #  59 RPM @ 12V
-        "rpm_per_tick": 0.111,
-        "features": [],
-    },
-    300: {
-        "name": "AX-12W",
-        "encoder_resolution": 1024,
-        "range_degrees": 300.0,
-        "torque_per_volt": 0.2 / 12.0,  # 0.2 NM @ 12V
-        "velocity_per_volt": (470 * RPM_TO_RADSEC) / 12.0,  # 470 RPM @ 12V
-        "rpm_per_tick": 0.111,
-        "features": [],
-    },
-    18: {
-        "name": "AX-18",
-        "encoder_resolution": 1024,
-        "range_degrees": 300.0,
-        "torque_per_volt": 1.8 / 12.0,  #  1.8 NM @ 12V
-        "velocity_per_volt": (97 * RPM_TO_RADSEC) / 12.0,  #  97 RPM @ 12V
-        "rpm_per_tick": 0.111,
-        "features": [],
-    },
-    10: {
-        "name": "RX-10",
-        "encoder_resolution": 1024,
-        "range_degrees": 300.0,
-        "torque_per_volt": 1.3 / 12.0,  #  1.3 NM @ 12V
-        "velocity_per_volt": (54 * RPM_TO_RADSEC) / 12.0,  #  54 RPM @ 12V
-        "rpm_per_tick": 0.111,
-        "features": [],
-    },
-    24: {
-        "name": "RX-24",
-        "encoder_resolution": 1024,
-        "range_degrees": 300.0,
-        "torque_per_volt": 2.6 / 12.0,  #  2.6 NM @ 12V
-        "velocity_per_volt": (126 * RPM_TO_RADSEC) / 12.0,  # 126 RPM @ 12V
-        "rpm_per_tick": 0.111,
-        "features": [],
-    },
-    28: {
-        "name": "RX-28",
-        "encoder_resolution": 1024,
-        "range_degrees": 300.0,
-        "torque_per_volt": 3.7 / 18.5,  #  3.7 NM @ 18.5V
-        "velocity_per_volt": (85 * RPM_TO_RADSEC) / 18.5,  #  85 RPM @ 18.5V
-        "rpm_per_tick": 0.111,
-        "features": [],
-    },
-    64: {
-        "name": "RX-64",
-        "encoder_resolution": 1024,
-        "range_degrees": 300.0,
-        "torque_per_volt": 5.3 / 18.5,  #  5.3 NM @ 18.5V
-        "velocity_per_volt": (64 * RPM_TO_RADSEC) / 18.5,  #  64 RPM @ 18.5V
-        "rpm_per_tick": 0.111,
-        "features": [],
-    },
-    106: {
-        "name": "EX-106",
-        "encoder_resolution": 4096,
-        "range_degrees": 250.92,
-        "torque_per_volt": 10.9 / 18.5,  # 10.9 NM @ 18.5V
-        "velocity_per_volt": (91 * RPM_TO_RADSEC) / 18.5,  #  91 RPM @ 18.5V
-        "rpm_per_tick": 0.111,
-        "features": [DXL_SENSED_CURRENT_L],
-    },
-    107: {
-        "name": "EX-106+",
-        "encoder_resolution": 4096,
-        "range_degrees": 250.92,
-        "torque_per_volt": 10.9 / 18.5,  # 10.9 NM @ 18.5V
-        "velocity_per_volt": (91 * RPM_TO_RADSEC) / 18.5,  #  91 RPM @ 18.5V
-        "rpm_per_tick": 0.111,
-        "features": [DXL_SENSED_CURRENT_L],
-    },
-    360: {
-        "name": "MX-12W",
-        "encoder_resolution": 4096,
-        "range_degrees": 360.0,
-        "torque_per_volt": 0.2 / 12.0,  #  torque not specified!
-        "velocity_per_volt": (470 * RPM_TO_RADSEC) / 12.0,  #  470 RPM @ 12.0V
-        "rpm_per_tick": 0.114,
-        "features": [DXL_GOAL_ACCELERATION],
-    },
-    29: {
-        "name": "MX-28",
+    30: {
+        "name": "MX-28(2.0)",
         "encoder_resolution": 4096,
         "range_degrees": 360.0,
         "torque_per_volt": 2.5 / 12.0,  #  2.5 NM @ 12V
-        "velocity_per_volt": (55 * RPM_TO_RADSEC) / 12.0,  #  54 RPM @ 12.0V
-        "rpm_per_tick": 0.114,
-        "features": [DXL_GOAL_ACCELERATION],
+        "velocity_per_volt": (55 * RPM_TO_RADSEC) / 12.0,  #  55 RPM @ 12.0V
+        "rpm_per_tick": 0.229,
+        "features": [DXL_PRESENT_LOAD],
     },
-    310: {
-        "name": "MX-64",
+    311: {
+        "name": "MX-64(2.0)",
         "encoder_resolution": 4096,
         "range_degrees": 360.0,
         "torque_per_volt": 6.0 / 12.0,  #  6 NM @ 12V
         "velocity_per_volt": (63 * RPM_TO_RADSEC) / 12.0,  #  63 RPM @ 12.0V
-        "rpm_per_tick": 0.114,
-        "features": [DXL_CURRENT_L, DXL_TORQUE_CONTROL_MODE, DXL_GOAL_ACCELERATION],
+        "rpm_per_tick": 0.229,
+        "features": [DXL_PRESENT_CURRENT],
     },
-    320: {
-        "name": "MX-106",
+    321: {
+        "name": "MX-106(2.0)",
         "encoder_resolution": 4096,
         "range_degrees": 360.0,
         "torque_per_volt": 8.4 / 12.0,  #  8.4 NM @ 12V
         "velocity_per_volt": (45 * RPM_TO_RADSEC) / 12.0,  #  45 RPM @ 12.0V
-        "rpm_per_tick": 0.114,
-        "features": [DXL_CURRENT_L, DXL_TORQUE_CONTROL_MODE, DXL_GOAL_ACCELERATION],
+        "rpm_per_tick": 0.229,
+        "features": [DXL_PRESENT_CURRENT],
     },
     1020: {
         "name": "XM430-W350",
@@ -343,8 +237,7 @@ DXL_MODEL_TO_PARAMS = {
         "range_degrees": 360.0,
         "torque_per_volt": 4.1 / 12.0,  #  8.4 NM @ 12V
         "velocity_per_volt": (46 * RPM_TO_RADSEC) / 12.0,  #  45 RPM @ 12.0V
-        "rpm_per_tick": 0.229,    # [TODO] double check how compute???
-        "features": [DXL_CURRENT_L],    # [TODO] re-eval later
-#        "features": [DXL_CURRENT_L, DXL_TORQUE_CONTROL_MODE, DXL_GOAL_ACCELERATION],
+        "rpm_per_tick": 0.229, 
+        "features": [DXL_PRESENT_CURRENT],    # [TODO] re-eval later
     },
 }

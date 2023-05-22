@@ -56,7 +56,7 @@ def DXL_MAKEWORD(a, b):
 
 
 def DXL_MAKEDWORD(a, b):
-    return (a & 0xFFFF) | (b & 0xFFFF) << 16
+    return (a & 0xFFFF) | ((b & 0xFFFF) << 16)
 
 
 def DXL_LOWORD(l):

@@ -74,10 +74,15 @@ def DXL_LOBYTE(w):
 def DXL_HIBYTE(w):
     return (w >> 8) & 0xFF
     
+def DXL_WORD_TO_INT16(w):
+    if (w & 0x8000):     # negative number -> compute signed int32 value
+      val = -(w >> 15)*(2**15) + (w & 0x7fff) + 1     # 2's complement representation -> signed int16
+    else:                # positive number -> no change
+      val = w
     
 def DXL_DWORD_TO_INT32(dw):
     if (dw & 0x80000000):     # negative number -> compute signed int32 value
-      val = -(dw >> 31)*(2**31) + (dw & 0x7fffffff) + 1     # 2's complement representation -> signed int
+      val = -(dw >> 31)*(2**31) + (dw & 0x7fffffff) + 1     # 2's complement representation -> signed int32
     else:                     # positive number -> no change
       val = dw
 

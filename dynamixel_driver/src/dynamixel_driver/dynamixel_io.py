@@ -1086,14 +1086,30 @@ class DynamixelIO(object):
         # return the data in a dictionary
         return {"min": min_voltage, "max": max_voltage}
 
+    def get_goal_position(self, servo_id):
+        """Reads the servo's goal position value from its registers."""
+        response = self.read(servo_id, DXL_GOAL_POSITION, 4)
+        if response:
+            self.exception_on_error(response[8], servo_id, "fetching goal position")
+        goal_lword = DXL_MAKEWORD(response[9], response[10])
+        goal_hword = DXL_MAKEWORD(response[11], response[12])
+        goal_binary = DXL_MAKEDWORD(goal_lword, goal_hword)
+
+        goal = DXL_DWORD_TO_INT32(goal_binary)
+
+        return goal
+
     def get_position(self, servo_id):
         """Reads the servo's position value from its registers."""
-        response = self.read(servo_id, DXL_PRESENT_POSITION, 2)
+        response = self.read(servo_id, DXL_PRESENT_POSITION, 4)
         if response:
             self.exception_on_error(response[8], servo_id, "fetching present position")
         position_lword = DXL_MAKEWORD(response[9], response[10])
         position_hword = DXL_MAKEWORD(response[11], response[12])
-        position = DXL_MAKEDWORD(position_lword, position_hword)
+        position_binary = DXL_MAKEDWORD(position_lword, position_hword)
+
+        position = DXL_DWORD_TO_INT32(position_binary)
+
         return position
 
     def get_speed(self, servo_id):
@@ -1116,7 +1132,7 @@ class DynamixelIO(object):
             self.exception_on_error(response[8], servo_id, "fetching supplied voltage")
         return DXL_MAKEWORD(response[9], response[10]) / 10.0
 
-    def get_current(self, servo_id):   # [TODO] Revise for DXL 2.0 intfc
+    def get_current(self, servo_id):
         """Reads the servo's current consumption (if supported by model)"""
         model = self.get_model_number(servo_id)
         if not model in DXL_MODEL_TO_PARAMS:
@@ -1128,17 +1144,9 @@ class DynamixelIO(object):
                 self.exception_on_error(
                     response[8], servo_id, "fetching sensed current"
                 )
-            current = response[5] + (response[6] << 8)
-            return 0.0045 * (current - 2048)
-
-        if DXL_SENSED_CURRENT_L in DXL_MODEL_TO_PARAMS[model]["features"]:
-            response = self.read(servo_id, DXL_SENSED_CURRENT_L, 2)
-            if response:
-                self.exception_on_error(
-                    response[8], servo_id, "fetching sensed current"
-                )
-            current = response[5] + (response[6] << 8)
-            return 0.01 * (current - 512)
+            current_binary = DXL_MAKEWORD(response[5], response[6])
+            current = DXL_WORD_TO_INT16(current_binary)
+            return 0.00269 * current
 
         else:
             raise UnsupportedFeatureError(model, DXL_PRESENT_CURRENT)
@@ -1157,11 +1165,13 @@ class DynamixelIO(object):
             # extract data values from the raw data
             goal_lword = DXL_MAKEWORD(response[9], response[10])
             goal_hword = DXL_MAKEWORD(response[11], response[12])
-            goal = DXL_MAKEDWORD(goal_lword, goal_hword)
+            goal_binary = DXL_MAKEDWORD(goal_lword, goal_hword)
+            goal = DXL_DWORD_TO_INT32(goal_binary)
                         
             position_lword = DXL_MAKEWORD(response[25], response[26])
             position_hword = DXL_MAKEWORD(response[27], response[28])
-            position = DXL_MAKEDWORD(position_lword, position_hword)
+            position_binary = DXL_MAKEDWORD(position_lword, position_hword)
+            position = DXL_DWORD_TO_INT32(position_binary)
 
             error = position - goal
 

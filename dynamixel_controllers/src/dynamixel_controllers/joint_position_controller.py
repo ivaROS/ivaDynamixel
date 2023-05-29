@@ -133,11 +133,7 @@ class JointPositionController(JointController):
 
 #        if self.compliance_slope is not None:
 #            self.set_compliance_slope(self.compliance_slope)
-#        if self.compliance_margin is not None:
-#            self.set_compliance_margin(self.compliance_margin)
-#        if self.compliance_punch is not None:
-#            self.set_compliance_punch(self.compliance_punch)
-#        if self.torque_limit is not None:
+#        if self.torque_limit is not None:      # [TODO]
 #            self.set_torque_limit(self.torque_limit)
 #        if self.acceleration is not None:
 #            rospy.loginfo(
@@ -192,33 +188,13 @@ class JointPositionController(JointController):
         mcv = (self.motor_id, self.spd_rad_to_raw(speed))
         self.dxl_io.set_multi_speed([mcv])
 
-    def set_compliance_slope(self, slope):
-        if slope < DXL_MIN_COMPLIANCE_SLOPE:
-            slope = DXL_MIN_COMPLIANCE_SLOPE
-        elif slope > DXL_MAX_COMPLIANCE_SLOPE:
-            slope = DXL_MAX_COMPLIANCE_SLOPE
-        mcv = (self.motor_id, slope, slope)
-        self.dxl_io.set_multi_compliance_slopes([mcv])
-
-    def set_compliance_margin(self, margin):
-        if margin < DXL_MIN_COMPLIANCE_MARGIN:
-            margin = DXL_MIN_COMPLIANCE_MARGIN
-        elif margin > DXL_MAX_COMPLIANCE_MARGIN:
-            margin = DXL_MAX_COMPLIANCE_MARGIN
-        else:
-            margin = int(margin)
-        mcv = (self.motor_id, margin, margin)
-        self.dxl_io.set_multi_compliance_margins([mcv])
-
-    def set_compliance_punch(self, punch):
-        if punch < DXL_MIN_PUNCH:
-            punch = DXL_MIN_PUNCH
-        elif punch > DXL_MAX_PUNCH:
-            punch = DXL_MAX_PUNCH
-        else:
-            punch = int(punch)
-        mcv = (self.motor_id, punch)
-        self.dxl_io.set_multi_punch([mcv])
+#    def set_compliance_slope(self, slope):
+#        if slope < DXL_MIN_COMPLIANCE_SLOPE:
+#            slope = DXL_MIN_COMPLIANCE_SLOPE
+#        elif slope > DXL_MAX_COMPLIANCE_SLOPE:
+#            slope = DXL_MAX_COMPLIANCE_SLOPE
+#        mcv = (self.motor_id, slope, slope)
+#        self.dxl_io.set_multi_compliance_slopes([mcv])
 
     def set_torque_limit(self, max_torque):
         if max_torque > 1:

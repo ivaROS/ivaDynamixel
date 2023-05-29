@@ -1180,11 +1180,8 @@ class DynamixelIO(object):
             speed_binary = DXL_MAKEDWORD(speed_lword, speed_hword)
             speed = DXL_DWORD_TO_INT32(speed_binary)
               
-            load_raw = DXL_MAKEWORD(response[19], response[20])
-            load_direction = 1 if self.test_bit(load_raw, 10) else 0  # [TODO]
-            load = (load_raw & int("1111111111", 2)) / 1024.0
-            if load_direction == 1:
-                load = -load
+            load_raw = DXL_MAKEWORD(response[19], response[20])   # [TODO] rename -> current
+            load = 0.00269 * DXL_WORD_TO_INT16(load_raw)
                 
             voltage = DXL_MAKEWORD(response[37], response[38]) / 10.0  # Volts
             

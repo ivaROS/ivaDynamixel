@@ -1167,7 +1167,7 @@ class DynamixelIO(object):
             goal_hword = DXL_MAKEWORD(response[11], response[12])
             goal_binary = DXL_MAKEDWORD(goal_lword, goal_hword)
             goal = DXL_DWORD_TO_INT32(goal_binary)
-                        
+
             position_lword = DXL_MAKEWORD(response[25], response[26])
             position_hword = DXL_MAKEWORD(response[27], response[28])
             position_binary = DXL_MAKEDWORD(position_lword, position_hword)
@@ -1182,7 +1182,7 @@ class DynamixelIO(object):
               
             load_raw = DXL_MAKEWORD(response[19], response[20])   # [TODO] rename -> current
             load = 0.00269 * DXL_WORD_TO_INT16(load_raw)
-                
+
             voltage = DXL_MAKEWORD(response[37], response[38]) / 10.0  # Volts
             
             temperature = response[39]    # deg C

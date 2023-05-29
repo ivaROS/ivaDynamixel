@@ -73,3 +73,11 @@ def DXL_LOBYTE(w):
 
 def DXL_HIBYTE(w):
     return (w >> 8) & 0xFF
+    
+    
+def DXL_DWORD_TO_INT32(dw):
+    if (dw & 0x80000000):     # negative number -> compute signed int32 value
+      val = -(dw >> 31)*(2**31) + (dw & 0x7fffffff) + 1     # 2's complement representation -> signed int
+    else:                     # positive number -> no change
+      val = dw
+

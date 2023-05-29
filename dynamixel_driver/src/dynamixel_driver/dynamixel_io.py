@@ -1104,10 +1104,8 @@ class DynamixelIO(object):
         speed_lword = DXL_MAKEWORD(response[9], response[10])
         speed_hword = DXL_MAKEWORD(response[11], response[12])
         speed_binary = DXL_MAKEDWORD(speed_lword, speed_hword)
-        if (speed_binary & 0x80000000):     # convert to signed int32
-            speed = -(speed_binary >> 31)*(2**31) + (speed_binary & 0x7fffffff) + 1     # 2's complement representation -> signed int
-        else:
-            speed = speed_binary
+
+        speed = DXL_DWORD_TO_INT32(speed_binary)
             
         return speed
 
@@ -1170,10 +1168,7 @@ class DynamixelIO(object):
             speed_lword = DXL_MAKEWORD(response[21], response[22])
             speed_hword = DXL_MAKEWORD(response[23], response[24])
             speed_binary = DXL_MAKEDWORD(speed_lword, speed_hword)
-            if (speed_binary & 0x80000000):     # convert to appropriate signed int32 value
-              speed = -(speed_binary >> 31)*(2**31) + (speed_binary & 0x7fffffff) + 1     # 2's complement representation -> signed int
-            else:
-              speed = speed_binary
+            speed = DXL_DWORD_TO_INT32(speed_binary)
               
             load_raw = DXL_MAKEWORD(response[19], response[20])
             load_direction = 1 if self.test_bit(load_raw, 10) else 0  # [TODO]

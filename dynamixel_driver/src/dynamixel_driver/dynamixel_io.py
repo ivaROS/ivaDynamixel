@@ -540,89 +540,6 @@ class DynamixelIO(object):
             )
         return response
 
-    def set_compliance_margin_cw(self, servo_id, margin):  # [TODO] Revise for DXL 2.0 intfc
-        """
-        The error between goal position and present position in CW direction.
-        The range of the value is 0 to 255, and the unit is the same as Goal Position.
-        The greater the value, the more difference occurs.
-        """
-        response = self.write(servo_id, DXL_CW_COMPLIANCE_MARGIN, [margin])
-        if response:
-            self.exception_on_error(
-                response[8], servo_id, "setting CW compliance margin to %d" % margin
-            )
-        return response
-
-    def set_compliance_margin_ccw(self, servo_id, margin):  # [TODO] Revise for DXL 2.0 intfc
-        """
-        The error between goal position and present position in CCW direction.
-        The range of the value is 0 to 255, and the unit is the same as Goal Position.
-        The greater the value, the more difference occurs.
-        """
-        response = self.write(servo_id, DXL_CCW_COMPLIANCE_MARGIN, [margin])
-        if response:
-            self.exception_on_error(
-                response[8], servo_id, "setting CCW compliance margin to %d" % margin
-            )
-        return response
-
-    def set_compliance_margins(self, servo_id, margin_cw, margin_ccw):  # [TODO] Revise for DXL 2.0 intfc
-        """
-        The error between goal position and present position in CCW direction.
-        The range of the value is 0 to 255, and the unit is the same as Goal Position.
-        The greater the value, the more difference occurs.
-        """
-        response = self.write(
-            servo_id, DXL_CW_COMPLIANCE_MARGIN, (margin_cw, margin_ccw)
-        )
-        if response:
-            self.exception_on_error(
-                response[8],
-                servo_id,
-                "setting CW and CCW compliance margins to values %d and %d"
-                % (margin_cw, margin_ccw),
-            )
-        return response
-
-    def set_compliance_slope_cw(self, servo_id, slope):  # [TODO] Revise for DXL 2.0 intfc
-        """
-        Sets the level of Torque near the goal position in CW direction.
-        Compliance Slope is set in 7 steps, the higher the value, the more flexibility is obtained.
-        """
-        response = self.write(servo_id, DXL_CW_COMPLIANCE_SLOPE, [slope])
-        if response:
-            self.exception_on_error(
-                response[8], servo_id, "setting CW compliance slope to %d" % slope
-            )
-        return response
-
-    def set_compliance_slope_ccw(self, servo_id, slope):  # [TODO] Revise for DXL 2.0 intfc
-        """
-        Sets the level of Torque near the goal position in CCW direction.
-        Compliance Slope is set in 7 steps, the higher the value, the more flexibility is obtained.
-        """
-        response = self.write(servo_id, DXL_CCW_COMPLIANCE_SLOPE, [slope])
-        if response:
-            self.exception_on_error(
-                response[8], servo_id, "setting CCW compliance slope to %d" % slope
-            )
-        return response
-
-    def set_compliance_slopes(self, servo_id, slope_cw, slope_ccw):  # [TODO] Revise for DXL 2.0 intfc
-        """
-        Sets the level of Torque near the goal position in CW/CCW direction.
-        Compliance Slope is set in 7 steps, the higher the value, the more flexibility is obtained.
-        """
-        response = self.write(servo_id, DXL_CW_COMPLIANCE_SLOPE, (slope_cw, slope_ccw))
-        if response:
-            self.exception_on_error(
-                response[8],
-                servo_id,
-                "setting CW and CCW compliance slopes to %d and %d"
-                % (slope_cw, slope_ccw),
-            )
-        return response
-
     def set_d_gain(self, servo_id, d_gain):  # [TODO] Revise for DXL 2.0 intfc
         """
         Sets the value of derivative action of PID controller.
@@ -662,22 +579,6 @@ class DynamixelIO(object):
                 response[8],
                 servo_id,
                 "setting P gain value of PID controller to %d" % p_gain,
-            )
-        return response
-
-    def set_punch(self, servo_id, punch):  # [TODO] Revise for DXL 2.0 intfc
-        """
-        Sets the limit value of torque being reduced when the output torque is
-        decreased in the Compliance Slope area. In other words, it is the mimimum
-        torque. The initial value is 32 (0x20) and can be extended up to 1023
-        (0x3FF). (Refer to Compliance margin & Slope)
-        """
-        loVal = int(punch % 256)
-        hiVal = int(punch >> 8)
-        response = self.write(servo_id, DXL_PUNCH_L, (loVal, hiVal))
-        if response:
-            self.exception_on_error(
-                response[8], servo_id, "setting punch to %d" % punch
             )
         return response
 
@@ -1086,7 +987,7 @@ class DynamixelIO(object):
 
     def get_feedback(self, servo_id):
         """
-        Returns the id, goal, position, error, speed, load, voltage, temperature
+        Returns the id, goal, position, error, speed, current, voltage, temperature
         and moving values from the specified servo.
         """
         # read in 17 consecutive bytes starting with low value for goal position
@@ -1113,14 +1014,25 @@ class DynamixelIO(object):
             speed_binary = DXL_MAKEDWORD(speed_lword, speed_hword)
             speed = DXL_DWORD_TO_INT32(speed_binary)
               
-            load_raw = DXL_MAKEWORD(response[19], response[20])   # [TODO] rename -> current
-            load = 0.00269 * DXL_WORD_TO_INT16(load_raw)
+            current_raw = DXL_MAKEWORD(response[19], response[20])
+            current = 0.00269 * DXL_WORD_TO_INT16(current_raw)
 
             voltage = DXL_MAKEWORD(response[37], response[38]) / 10.0  # Volts
             
             temperature = response[39]    # deg C
-                        
+            
             moving = response[15]
+            
+            moving_status_byte = response[16]     # moving status bit breakdown
+            velocity_profile = (moving_status_byte & 0x30) >> 4
+            following_error = moving_status_byte & 0x08
+            profile_ongoing = moving_status_byte & 0x02
+            in_position = moving_status_byte & 0x01
+            moving_status = { "velocity_profile": velocity_profile, 
+                              "following_error": bool(following_error), 
+                              "profile_ongoing": bool(profile_ongoing), 
+                              "in_position": bool(in_position),
+                            }
             
             timestamp = time.time()
 
@@ -1132,10 +1044,11 @@ class DynamixelIO(object):
                 "position": position,
                 "error": error,
                 "speed": speed,
-                "load": load,
+                "current": current,
                 "voltage": voltage,
                 "temperature": temperature,
                 "moving": bool(moving),
+                "moving_status": moving_status,
             }
 
     def get_led(self, servo_id):

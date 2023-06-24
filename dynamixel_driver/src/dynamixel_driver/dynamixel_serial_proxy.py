@@ -61,6 +61,7 @@ from diagnostic_msgs.msg import DiagnosticArray
 from diagnostic_msgs.msg import DiagnosticStatus
 from diagnostic_msgs.msg import KeyValue
 
+from dynamixel_msgs.msg import MovingStatus
 from dynamixel_msgs.msg import MotorState
 from dynamixel_msgs.msg import MotorStateList
 
@@ -301,6 +302,9 @@ class SerialProxy:
                 try:
                     state = self.dxl_io.get_feedback(motor_id)
                     if state:
+                        # cast sub-dict to MovingStatus msg
+                        state.update({"moving_status": MovingStatus(**state["moving_status"])})
+                        # cast dict to MotorState msg
                         motor_states.append(MotorState(**state))
                         if dynamixel_io.exception:
                             raise dynamixel_io.exception
@@ -394,42 +398,43 @@ class SerialProxy:
                 )
                 status.values.append(
                     KeyValue(
-                        "Return Delay Time", str(self.motor_static_info[mid]["delay"])
+                        "Return Delay Time", 
+                        "{0:d} ms".format(self.motor_static_info[mid]["delay"])
                     )
                 )
                 status.values.append(
                     KeyValue(
                         "Minimum Voltage",
-                        str(self.motor_static_info[mid]["min_voltage"]),
+                        "{0:.1f} V".format(self.motor_static_info[mid]["min_voltage"]),
                     )
                 )
                 status.values.append(
                     KeyValue(
                         "Maximum Voltage",
-                        str(self.motor_static_info[mid]["max_voltage"]),
+                        "{0:.1f} V".format(self.motor_static_info[mid]["max_voltage"]),
                     )
                 )
                 status.values.append(
                     KeyValue(
                         "Minimum Position (CW)",
-                        str(self.motor_static_info[mid]["min_angle"]),
+                        "{0:d} enc ticks".format(self.motor_static_info[mid]["min_angle"]),
                     )
                 )
                 status.values.append(
                     KeyValue(
                         "Maximum Position (CCW)",
-                        str(self.motor_static_info[mid]["max_angle"]),
+                        "{0:d} enc ticks".format(self.motor_static_info[mid]["max_angle"]),
                     )
                 )
 
-                status.values.append(KeyValue("Goal", str(motor_state.goal)))
-                status.values.append(KeyValue("Position", str(motor_state.position)))
-                status.values.append(KeyValue("Error", str(motor_state.error)))
-                status.values.append(KeyValue("Velocity", str(motor_state.speed)))
-                status.values.append(KeyValue("Load", str(motor_state.load)))
-                status.values.append(KeyValue("Voltage", str(motor_state.voltage)))
+                status.values.append(KeyValue("Goal", "{0:d} enc ticks".format(motor_state.goal)))
+                status.values.append(KeyValue("Position", "{0:d} enc ticks".format(motor_state.position)))
+                status.values.append(KeyValue("Error", "{0:d} enc ticks".format(motor_state.error)))
+                status.values.append(KeyValue("Velocity", "{0:d} enc ticks/sec".format(motor_state.speed)))
+                status.values.append(KeyValue("Current", "{0:.5f} A".format(motor_state.current)))
+                status.values.append(KeyValue("Voltage", "{0:.1f} V".format(motor_state.voltage)))
                 status.values.append(
-                    KeyValue("Temperature", str(motor_state.temperature))
+                    KeyValue("Temperature", "{0:d} C".format(motor_state.temperature))
                 )
                 status.values.append(KeyValue("Moving", str(motor_state.moving)))
 

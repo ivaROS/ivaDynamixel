@@ -1115,7 +1115,7 @@ class DynamixelIO(object):
 
     def get_voltage(self, servo_id):
         """Reads the servo's voltage."""
-        response = self.read(servo_id, DXL_PRESENT_VOLTAGE, 2)
+        response = self.read(servo_id, DXL_PRESENT_INPUT_VOLTAGE, 2)
         if response:
             self.exception_on_error(response[8], servo_id, "fetching supplied voltage")
         return DXL_MAKEWORD(response[9], response[10]) / 10.0

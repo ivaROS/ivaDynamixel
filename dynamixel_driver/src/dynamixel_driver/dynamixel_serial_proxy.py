@@ -207,6 +207,59 @@ class SerialProxy:
             % (self.port_namespace, motor_id),
             range_radians / encoder_resolution,
         )
+        
+        if ( "rpm_sq_per_tick" in DXL_MODEL_TO_PARAMS[model_number] ):     # feature presence varies with model
+          rpm_sq_per_tick = DXL_MODEL_TO_PARAMS[model_number]["rpm_sq_per_tick"]
+          rospy.set_param(
+              "dynamixel/%s/%d/rpm_sq_per_tick" % (self.port_namespace, motor_id),
+              rpm_sq_per_tick,
+          )
+        pwm_per_tick = DXL_MODEL_TO_PARAMS[model_number]["pwm_per_tick"]
+        rospy.set_param(
+            "dynamixel/%s/%d/pwm_per_tick" % (self.port_namespace, motor_id),
+            pwm_per_tick,
+        )
+        if ( "current_per_tick" in DXL_MODEL_TO_PARAMS[model_number] ):     # feature presence varies with model
+          current_per_tick = DXL_MODEL_TO_PARAMS[model_number]["current_per_tick"]
+          rospy.set_param(
+              "dynamixel/%s/%d/current_per_tick" % (self.port_namespace, motor_id),
+              current_per_tick,
+          )
+        if ( "load_per_tick" in DXL_MODEL_TO_PARAMS[model_number] ):     # feature presence varies with model
+          load_per_tick = DXL_MODEL_TO_PARAMS[model_number]["load_per_tick"]
+          rospy.set_param(
+              "dynamixel/%s/%d/load_per_tick" % (self.port_namespace, motor_id),
+              load_per_tick,
+          )        
+
+        max_velocity_tick = DXL_MODEL_TO_PARAMS[model_number]["max_velocity_tick"]
+        rospy.set_param(
+            "dynamixel/%s/%d/max_velocity_tick" % (self.port_namespace, motor_id),
+            max_velocity_tick,
+        )
+        if ( "max_current_tick" in DXL_MODEL_TO_PARAMS[model_number] ):     # feature presence varies with model
+          max_current_tick = DXL_MODEL_TO_PARAMS[model_number]["max_current_tick"]
+          rospy.set_param(
+              "dynamixel/%s/%d/max_current_tick" % (self.port_namespace, motor_id),
+              max_current_tick,
+          )
+        max_pwm_tick = DXL_MODEL_TO_PARAMS[model_number]["max_pwm_tick"]
+        rospy.set_param(
+            "dynamixel/%s/%d/max_pwm_tick" % (self.port_namespace, motor_id),
+            max_pwm_tick,
+        )
+        if ( "max_load_tick" in DXL_MODEL_TO_PARAMS[model_number] ):     # feature presence varies with model
+          max_load_tick = DXL_MODEL_TO_PARAMS[model_number]["max_load_tick"]
+          rospy.set_param(
+              "dynamixel/%s/%d/max_load_tick" % (self.port_namespace, motor_id),
+              max_load_tick,
+          )
+        if ( "max_acceleration_tick" in DXL_MODEL_TO_PARAMS[model_number] ):     # feature presence varies with model
+          max_acceleration_tick = DXL_MODEL_TO_PARAMS[model_number]["max_acceleration_tick"]
+          rospy.set_param(
+              "dynamixel/%s/%d/max_acceleration_tick" % (self.port_namespace, motor_id),
+              max_acceleration_tick,
+          )
 
         # keep some parameters around for diagnostics
         self.motor_static_info[motor_id] = {}

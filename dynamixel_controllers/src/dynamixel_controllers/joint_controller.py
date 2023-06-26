@@ -49,7 +49,7 @@ from dynamixel_driver.dynamixel_const import *
 
 from dynamixel_controllers.srv import SetSpeed
 from dynamixel_controllers.srv import TorqueEnable
-#from dynamixel_controllers.srv import SetComplianceSlope
+from dynamixel_controllers.srv import SetGain
 from dynamixel_controllers.srv import SetTorqueLimit
 
 from std_msgs.msg import Float64
@@ -67,6 +67,31 @@ class JointController:
         self.joint_speed = rospy.get_param(
             self.controller_namespace + "/joint_speed", 1.0
         )
+        
+        self.pos_p_gain = rospy.get_param(
+            self.controller_namespace + "/joint_pos_p_gain", None
+        )
+        self.pos_i_gain = rospy.get_param(
+            self.controller_namespace + "/joint_pos_i_gain", None
+        )
+        self.pos_d_gain = rospy.get_param(
+            self.controller_namespace + "/joint_pos_d_gain", None
+        )
+
+        self.vel_p_gain = rospy.get_param(
+            self.controller_namespace + "/joint_vel_p_gain", None
+        )
+        self.vel_i_gain = rospy.get_param(
+            self.controller_namespace + "/joint_vel_i_gain", None
+        )
+
+        self.ff_1st_gain = rospy.get_param(
+            self.controller_namespace + "/joint_ff_1st_gain", None
+        )
+        self.ff_2nd_gain = rospy.get_param(
+            self.controller_namespace + "/joint_ff_2nd_gain", None
+        )
+
         self.torque_limit = rospy.get_param(
             self.controller_namespace + "/joint_torque_limit", None
         )
@@ -86,17 +111,101 @@ class JointController:
             SetTorqueLimit,
             self.process_set_torque_limit,
         )
+        
+        self.position_p_gain_service = rospy.Service(
+            self.controller_namespace + "/position_p_gain",
+            SetGain,
+            self.process_set_pos_p_gain,
+        )
+        self.position_i_gain_service = rospy.Service(
+            self.controller_namespace + "/position_i_gain",
+            SetGain,
+            self.process_set_pos_i_gain,
+        )
+        self.position_d_gain_service = rospy.Service(
+            self.controller_namespace + "/position_d_gain",
+            SetGain,
+            self.process_set_pos_d_gain,
+        )
+        self.velocity_p_gain_service = rospy.Service(
+            self.controller_namespace + "/velocity_p_gain",
+            SetGain,
+            self.process_set_vel_p_gain,
+        )
+        self.velocity_i_gain_service = rospy.Service(
+            self.controller_namespace + "/velocity_i_gain",
+            SetGain,
+            self.process_set_vel_i_gain,
+        )
+        self.feedforward_1st_gain_service = rospy.Service(
+            self.controller_namespace + "/feedforward_1st_gain",
+            SetGain,
+            self.process_set_ff_1st_gain,
+        )
+        self.feedforward_2nd_gain_service = rospy.Service(
+            self.controller_namespace + "/feedforward_2nd_gain",
+            SetGain,
+            self.process_set_ff_2nd_gain,
+        )
 
     def __ensure_limits(self):
-#        if self.compliance_slope is not None:
-#            if self.compliance_slope < DXL_MIN_COMPLIANCE_SLOPE:
-#                self.compliance_slope = DXL_MIN_COMPLIANCE_SLOPE
-#            elif self.compliance_slope > DXL_MAX_COMPLIANCE_SLOPE:
-#                self.compliance_slope = DXL_MAX_COMPLIANCE_SLOPE
-#            else:
-#                self.compliance_slope = int(self.compliance_slope)
+        if self.pos_p_gain is not None:
+            if self.pos_p_gain < DXL_MIN_POS_P_GAIN:
+                self.pos_p_gain = DXL_MIN_POS_P_GAIN
+            elif self.pos_p_gain > DXL_MAX_POS_P_GAIN:
+                self.pos_p_gain = DXL_MAX_POS_P_GAIN
+            else:
+                self.pos_p_gain = int(self.pos_p_gain)
 
-        if self.torque_limit is not None:
+        if self.pos_i_gain is not None:
+            if self.pos_i_gain < DXL_MIN_POS_I_GAIN:
+                self.pos_i_gain = DXL_MIN_POS_I_GAIN
+            elif self.pos_i_gain > DXL_MAX_POS_I_GAIN:
+                self.pos_i_gain = DXL_MAX_POS_I_GAIN
+            else:
+                self.pos_i_gain = int(self.pos_i_gain)
+
+        if self.pos_d_gain is not None:
+            if self.pos_d_gain < DXL_MIN_POS_D_GAIN:
+                self.pos_d_gain = DXL_MIN_POS_D_GAIN
+            elif self.pos_d_gain > DXL_MAX_POS_D_GAIN:
+                self.pos_d_gain = DXL_MAX_POS_D_GAIN
+            else:
+                self.pos_d_gain = int(self.pos_d_gain)
+
+        if self.vel_p_gain is not None:
+            if self.vel_p_gain < DXL_MIN_VEL_P_GAIN:
+                self.vel_p_gain = DXL_MIN_VEL_P_GAIN
+            elif self.vel_p_gain > DXL_MAX_VEL_P_GAIN:
+                self.vel_p_gain = DXL_MAX_VEL_P_GAIN
+            else:
+                self.vel_p_gain = int(self.vel_p_gain)
+
+        if self.vel_i_gain is not None:
+            if self.vel_i_gain < DXL_MIN_VEL_I_GAIN:
+                self.vel_i_gain = DXL_MIN_VEL_I_GAIN
+            elif self.vel_i_gain > DXL_MAX_VEL_I_GAIN:
+                self.vel_i_gain = DXL_MAX_VEL_I_GAIN
+            else:
+                self.vel_i_gain = int(self.vel_i_gain)
+
+        if self.ff_1st_gain is not None:
+            if self.ff_1st_gain < DXL_MIN_FF_1ST_GAIN:
+                self.ff_1st_gain = DXL_MIN_FF_1ST_GAIN
+            elif self.ff_1st_gain > DXL_MAX_FF_1ST_GAIN:
+                self.ff_1st_gain = DXL_MAX_FF_1ST_GAIN
+            else:
+                self.ff_1st_gain = int(self.ff_1st_gain)
+
+        if self.ff_2nd_gain is not None:
+            if self.ff_2nd_gain < DXL_MIN_FF_2ND_GAIN:
+                self.ff_2nd_gain = DXL_MIN_FF_2ND_GAIN
+            elif self.ff_2nd_gain > DXL_MAX_FF_2ND_GAIN:
+                self.ff_2nd_gain = DXL_MAX_FF_2ND_GAIN
+            else:
+                self.ff_2nd_gain = int(self.ff_2nd_gain)
+
+        if self.torque_limit is not None:     # [TODO] change to current limit, add other limits; add model-based conversion factors
             if self.torque_limit < 0:
                 self.torque_limit = 0.0
             elif self.torque_limit > 1:
@@ -133,8 +242,26 @@ class JointController:
     def set_speed(self, speed):
         raise NotImplementedError
 
-#    def set_compliance_slope(self, slope):
-#        raise NotImplementedError
+    def set_pos_p_gain(self, gain):
+        raise NotImplementedError
+
+    def set_pos_i_gain(self, gain):
+        raise NotImplementedError
+
+    def set_pos_d_gain(self, gain):
+        raise NotImplementedError
+
+    def set_vel_p_gain(self, gain):
+        raise NotImplementedError
+
+    def set_vel_i_gain(self, gain):
+        raise NotImplementedError
+
+    def set_ff_1st_gain(self, gain):
+        raise NotImplementedError
+
+    def set_ff_2nd_gain(self, gain):
+        raise NotImplementedError
 
     def set_torque_limit(self, max_torque):
         raise NotImplementedError
@@ -147,11 +274,35 @@ class JointController:
         self.set_torque_enable(req.torque_enable)
         return []
 
-#    def process_set_compliance_slope(self, req):
-#        self.set_compliance_slope(req.slope)
-#        return []
+    def process_set_pos_p_gain(self, req):
+        self.set_pos_p_gain(req.gain)
+        return []
 
-    def process_set_torque_limit(self, req):
+    def process_set_pos_i_gain(self, req):
+        self.set_pos_i_gain(req.gain)
+        return []
+
+    def process_set_pos_d_gain(self, req):
+        self.set_pos_d_gain(req.gain)
+        return []
+
+    def process_set_vel_p_gain(self, req):
+        self.set_vel_p_gain(req.gain)
+        return []
+
+    def process_set_vel_i_gain(self, req):
+        self.set_vel_i_gain(req.gain)
+        return []
+
+    def process_set_ff_1st_gain(self, req):
+        self.set_ff_1st_gain(req.gain)
+        return []
+
+    def process_set_ff_2nd_gain(self, req):
+        self.set_ff_2nd_gain(req.gain)
+        return []
+
+    def process_set_torque_limit(self, req):    # [TODO] re-implement as current limit
         self.set_torque_limit(req.torque_limit)
         return []
 

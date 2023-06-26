@@ -122,6 +122,7 @@ class JointPositionController(JointController):
             "dynamixel/%s/%d/encoder_resolution" % (self.port_namespace, self.motor_id)
         )
         self.MAX_POSITION = self.ENCODER_RESOLUTION - 1
+        
         self.VELOCITY_PER_TICK = rospy.get_param(
             "dynamixel/%s/%d/radians_second_per_encoder_tick"
             % (self.port_namespace, self.motor_id)
@@ -129,10 +130,66 @@ class JointPositionController(JointController):
         self.MAX_VELOCITY = rospy.get_param(
             "dynamixel/%s/%d/max_velocity" % (self.port_namespace, self.motor_id)
         )
+        self.MAX_VELOCITY_TICK = rospy.get_param(
+            "dynamixel/%s/%d/max_velocity_tick" % (self.port_namespace, self.motor_id)
+        )
         self.MIN_VELOCITY = self.VELOCITY_PER_TICK
 
-#        if self.compliance_slope is not None:
-#            self.set_compliance_slope(self.compliance_slope)
+        self.CURRENT_PER_TICK = rospy.get_param(
+            "dynamixel/%s/%d/current_per_tick"
+            % (self.port_namespace, self.motor_id), 
+            None
+        )
+        self.MAX_CURRENT_TICK = rospy.get_param(
+            "dynamixel/%s/%d/max_current_tick" % (self.port_namespace, self.motor_id), 
+            None
+        )
+
+        self.PWM_PER_TICK = rospy.get_param(
+            "dynamixel/%s/%d/pwm_per_tick"
+            % (self.port_namespace, self.motor_id)
+        )
+        self.MAX_PWM_TICK = rospy.get_param(
+            "dynamixel/%s/%d/max_pwm_tick" % (self.port_namespace, self.motor_id)
+        )
+
+        self.ACCELERATION_PER_TICK = rospy.get_param(
+            "dynamixel/%s/%d/radians_second_sq_per_encoder_tick"
+            % (self.port_namespace, self.motor_id), 
+            None
+        )
+        self.MAX_ACCELERATION_TICK = rospy.get_param(
+            "dynamixel/%s/%d/max_acceleration_tick" % (self.port_namespace, self.motor_id), 
+            None
+        )
+
+        self.LOAD_PER_TICK = rospy.get_param(
+            "dynamixel/%s/%d/load_per_tick"
+            % (self.port_namespace, self.motor_id), 
+            None
+        )
+        self.MAX_LOAD_TICK = rospy.get_param(
+            "dynamixel/%s/%d/max_load_tick" % (self.port_namespace, self.motor_id), 
+            None
+        )
+
+        if self.pos_p_gain is not None:
+            self.set_pos_p_gain(self.pos_p_gain)
+        if self.pos_i_gain is not None:
+            self.set_pos_i_gain(self.pos_i_gain)
+        if self.pos_d_gain is not None:
+            self.set_pos_d_gain(self.pos_d_gain)
+
+        if self.vel_p_gain is not None:
+            self.set_vel_p_gain(self.vel_p_gain)
+        if self.vel_i_gain is not None:
+            self.set_vel_i_gain(self.vel_i_gain)
+
+        if self.ff_1st_gain is not None:
+            self.set_ff_1st_gain(self.ff_1st_gain)
+        if self.ff_2nd_gain is not None:
+            self.set_ff_2nd_gain(self.ff_2nd_gain)
+
 #        if self.torque_limit is not None:      # [TODO]
 #            self.set_torque_limit(self.torque_limit)
 #        if self.acceleration is not None:
@@ -188,14 +245,62 @@ class JointPositionController(JointController):
         mcv = (self.motor_id, self.spd_rad_to_raw(speed))
         self.dxl_io.set_multi_speed([mcv])
 
-#    def set_compliance_slope(self, slope):
-#        if slope < DXL_MIN_COMPLIANCE_SLOPE:
-#            slope = DXL_MIN_COMPLIANCE_SLOPE
-#        elif slope > DXL_MAX_COMPLIANCE_SLOPE:
-#            slope = DXL_MAX_COMPLIANCE_SLOPE
-#        mcv = (self.motor_id, slope, slope)
-#        self.dxl_io.set_multi_compliance_slopes([mcv])
+    def set_pos_p_gain(self, gain):
+        if gain < DXL_MIN_POS_P_GAIN:
+            gain = DXL_MIN_POS_P_GAIN
+        elif gain > DXL_MAX_POS_P_GAIN:
+            gain = DXL_MAX_POS_P_GAIN
+        mcv = (self.motor_id, gain)
+        self.dxl_io.set_multi_position_p_gain([mcv])
 
+    def set_pos_i_gain(self, gain):
+        if gain < DXL_MIN_POS_I_GAIN:
+            gain = DXL_MIN_POS_I_GAIN
+        elif gain > DXL_MAX_POS_I_GAIN:
+            gain = DXL_MAX_POS_I_GAIN
+        mcv = (self.motor_id, gain)
+        self.dxl_io.set_multi_position_i_gain([mcv])
+
+    def set_pos_d_gain(self, gain):
+        if gain < DXL_MIN_POS_D_GAIN:
+            gain = DXL_MIN_POS_D_GAIN
+        elif gain > DXL_MAX_POS_D_GAIN:
+            gain = DXL_MAX_POS_D_GAIN
+        mcv = (self.motor_id, gain)
+        self.dxl_io.set_multi_position_d_gain([mcv])
+
+    def set_vel_p_gain(self, gain):
+        if gain < DXL_MIN_VEL_P_GAIN:
+            gain = DXL_MIN_VEL_P_GAIN
+        elif gain > DXL_MAX_VEL_P_GAIN:
+            gain = DXL_MAX_VEL_P_GAIN
+        mcv = (self.motor_id, gain)
+        self.dxl_io.set_multi_velocity_p_gain([mcv])
+      
+    def set_vel_i_gain(self, gain):
+        if gain < DXL_MIN_VEL_I_GAIN:
+            gain = DXL_MIN_VEL_I_GAIN
+        elif gain > DXL_MAX_VEL_I_GAIN:
+            gain = DXL_MAX_VEL_I_GAIN
+        mcv = (self.motor_id, gain)
+        self.dxl_io.set_multi_velocity_i_gain([mcv])
+
+    def set_ff_1st_gain(self, gain):
+        if gain < DXL_MIN_FF_1ST_GAIN:
+            gain = DXL_MIN_FF_1ST_GAIN
+        elif gain > DXL_MAX_FF_1ST_GAIN:
+            gain = DXL_MAX_FF_1ST_GAIN
+        mcv = (self.motor_id, gain)
+        self.dxl_io.set_multi_feedforward_1st_gain([mcv])
+        
+    def set_ff_2nd_gain(self, gain):
+        if gain < DXL_MIN_FF_2ND_GAIN:
+            gain = DXL_MIN_FF_2ND_GAIN
+        elif gain > DXL_MAX_FF_2ND_GAIN:
+            gain = DXL_MAX_FF_2ND_GAIN
+        mcv = (self.motor_id, gain)
+        self.dxl_io.set_multi_feedforward_2nd_gain([mcv])
+        
     def set_torque_limit(self, max_torque):
         if max_torque > 1:
             max_torque = 1.0  # use all torque motor can provide

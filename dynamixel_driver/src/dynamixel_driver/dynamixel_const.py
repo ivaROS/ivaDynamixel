@@ -71,6 +71,7 @@ DXL_MIN_VOLTAGE_LIMIT = 34
 
 DXL_PWM_LIMIT = 36
 DXL_CURRENT_LIMIT = 38
+DXL_ACCELERATION_LIMIT = 40
 DXL_VELOCITY_LIMIT = 44
 
 DXL_MAX_POS_LIMIT = 48
@@ -185,18 +186,27 @@ DXL_RESULT_FAIL_ERROR = 1
 DXL_NO_ERROR = 0
 
 # Static parameters
-DXL_MIN_COMPLIANCE_MARGIN = 0     # [TODO] Remove in: joint_controller.py, joint_position_controller_dual_motor.py, joint_position_controller.py, joint_torque_controller_dual_motor.py, joint_torque_controller.py
-DXL_MAX_COMPLIANCE_MARGIN = 255
+DXL_MIN_POS_P_GAIN = 0
+DXL_MAX_POS_P_GAIN = 16383
 
-DXL_MIN_COMPLIANCE_SLOPE = 1     # [TODO] Remove in: joint_controller.py, joint_position_controller_dual_motor.py, joint_position_controller.py, joint_torque_controller_dual_motor.py, joint_torque_controller.py
-DXL_MAX_COMPLIANCE_SLOPE = 254
+DXL_MIN_POS_I_GAIN = 0
+DXL_MAX_POS_I_GAIN = 16383
 
-# These are guesses as Dynamixel documentation doesn't have any info about it
-DXL_MIN_PUNCH = 0     # [TODO] Remove in: joint_controller.py, joint_position_controller_dual_motor.py, joint_position_controller.py, joint_torque_controller_dual_motor.py, joint_torque_controller.py
-DXL_MAX_PUNCH = 255
+DXL_MIN_POS_D_GAIN = 0
+DXL_MAX_POS_D_GAIN = 16383
 
-DXL_MAX_SPEED_TICK = 1023  # maximum speed in encoder units   [TODO] not used by code base; remove
-DXL_MAX_TORQUE_TICK = 1023  # maximum torque in encoder units   [TODO] Revise in: joint_position_controller_dual_motor.py, joint_position_controller.py, joint_torque_controller_dual_motor.py, joint_torque_controller.py (specific to MX-28 only?)
+DXL_MIN_VEL_P_GAIN = 0
+DXL_MAX_VEL_P_GAIN = 16383
+
+DXL_MIN_VEL_I_GAIN = 0
+DXL_MAX_VEL_I_GAIN = 16383
+
+DXL_MIN_FF_1ST_GAIN = 0
+DXL_MAX_FF_1ST_GAIN = 16383
+
+DXL_MIN_FF_2ND_GAIN = 0
+DXL_MAX_FF_2ND_GAIN = 16383
+
 
 KGCM_TO_NM = 0.0980665  # 1 kg-cm is that many N-m
 RPM_TO_RADSEC = 0.104719755  # 1 RPM is that many rad/sec
@@ -211,7 +221,14 @@ DXL_MODEL_TO_PARAMS = {
         "torque_per_volt": 2.5 / 12.0,  #  2.5 NM @ 12V
         "velocity_per_volt": (55 * RPM_TO_RADSEC) / 12.0,  #  55 RPM @ 12.0V
         "rpm_per_tick": 0.229,
-        "features": [DXL_PRESENT_LOAD],
+        "rpm_sq_per_tick": 214.577,       # [TODO] not implemented
+        "load_per_tick": 0.1,             # % / tick    # [TODO] not implemented
+        "pwm_per_tick": 0.113,            # % / tick 
+        "max_velocity_tick": 1023,         # max configurable velocity (units: ticks)
+        "max_load_tick": 1000,            # max configurable current (units: ticks, -1000 to +1000)    # [TODO] not implemented
+        "max_pwm_tick": 885,              # max configurable PWM (units: ticks)
+        "max_acceleration_tick": 32767,   # max configurable acceleration (units: ticks)    # [TODO] not implemented
+        "features": [DXL_ACCELERATION_LIMIT, DXL_PRESENT_LOAD],
     },
     311: {
         "name": "MX-64(2.0)",
@@ -220,7 +237,14 @@ DXL_MODEL_TO_PARAMS = {
         "torque_per_volt": 6.0 / 12.0,  #  6 NM @ 12V
         "velocity_per_volt": (63 * RPM_TO_RADSEC) / 12.0,  #  63 RPM @ 12.0V
         "rpm_per_tick": 0.229,
-        "features": [DXL_PRESENT_CURRENT],
+        "rpm_sq_per_tick": 214.577,       # [TODO] not implemented
+        "current_per_tick": 0.00336,      # mA / tick
+        "pwm_per_tick": 0.113,            # % / tick 
+        "max_velocity_tick": 1023,         # max configurable velocity (units: ticks)
+        "max_current_tick": 1941,         # max configurable current (units: ticks)
+        "max_pwm_tick": 885,              # max configurable PWM (units: ticks)
+        "max_acceleration_tick": 32767,   # max configurable acceleration (units: ticks)    # [TODO] not implemented
+        "features": [DXL_ACCELERATION_LIMIT, DXL_PRESENT_CURRENT],
     },
     321: {
         "name": "MX-106(2.0)",
@@ -229,7 +253,14 @@ DXL_MODEL_TO_PARAMS = {
         "torque_per_volt": 8.4 / 12.0,  #  8.4 NM @ 12V
         "velocity_per_volt": (45 * RPM_TO_RADSEC) / 12.0,  #  45 RPM @ 12.0V
         "rpm_per_tick": 0.229,
-        "features": [DXL_PRESENT_CURRENT],
+        "rpm_sq_per_tick": 214.577,       # [TODO] not implemented
+        "current_per_tick": 0.00336,      # mA / tick
+        "pwm_per_tick": 0.113,            # % / tick 
+        "max_velocity_tick": 1023,         # max configurable velocity (units: ticks)
+        "max_current_tick": 2047,         # max configurable current (units: ticks)
+        "max_pwm_tick": 885,              # max configurable PWM (units: ticks)
+        "max_acceleration_tick": 32767,   # max configurable acceleration (units: ticks)    # [TODO] not implemented
+        "features": [DXL_ACCELERATION_LIMIT, DXL_PRESENT_CURRENT],
     },
     1020: {
         "name": "XM430-W350",
@@ -238,6 +269,11 @@ DXL_MODEL_TO_PARAMS = {
         "torque_per_volt": 4.1 / 12.0,  #  8.4 NM @ 12V
         "velocity_per_volt": (46 * RPM_TO_RADSEC) / 12.0,  #  45 RPM @ 12.0V
         "rpm_per_tick": 0.229, 
-        "features": [DXL_PRESENT_CURRENT],    # [TODO] re-eval later
+        "current_per_tick": 0.00269,  # mA / tick
+        "pwm_per_tick": 0.113,        # % / tick 
+        "max_velocity_tick": 1023,    # max configurable velocity (units: ticks)
+        "max_current_tick": 1193,     # max configurable current (units: ticks)
+        "max_pwm_tick": 885,          # max configurable PWM (units: ticks)
+        "features": [DXL_PRESENT_CURRENT],
     },
 }

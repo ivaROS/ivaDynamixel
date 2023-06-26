@@ -752,6 +752,160 @@ class DynamixelIO(object):
         # use sync write to broadcast multi servo message
         self.sync_write(DXL_TORQUE_ENABLE, tuple(valueTuples))
 
+    def set_multi_position_p_gain(self, valueTuples):
+        """
+        Set different position P-gains for multiple servos.
+        Should be called as such:
+        set_multi_position_p_gain( ( (id1, gain1), (id2, gain2), (id3, gain3) ) )
+        """
+        # prepare value tuples for call to syncwrite
+        writeableVals = []
+
+        for vals in valueTuples:
+            sid = vals[0]
+            gain = vals[1]
+            
+            # split gain into 2 bytes
+            writeableVals.append(
+                ( sid, 
+                DXL_LOBYTE(gain), DXL_HIBYTE(gain) )
+            )
+
+        # use sync write to broadcast multi servo message
+        self.sync_write(DXL_POSITION_P_GAIN, writeableVals)
+
+    def set_multi_position_i_gain(self, valueTuples):
+        """
+        Set different position I-gains for multiple servos.
+        Should be called as such:
+        set_multi_position_i_gain( ( (id1, gain1), (id2, gain2), (id3, gain3) ) )
+        """
+        # prepare value tuples for call to syncwrite
+        writeableVals = []
+
+        for vals in valueTuples:
+            sid = vals[0]
+            gain = vals[1]
+            
+            # split gain into 2 bytes
+            writeableVals.append(
+                ( sid, 
+                DXL_LOBYTE(gain), DXL_HIBYTE(gain) )
+            )
+
+        # use sync write to broadcast multi servo message
+        self.sync_write(DXL_POSITION_I_GAIN, writeableVals)
+
+    def set_multi_position_d_gain(self, valueTuples):
+        """
+        Set different position D-gains for multiple servos.
+        Should be called as such:
+        set_multi_position_d_gain( ( (id1, gain1), (id2, gain2), (id3, gain3) ) )
+        """
+        # prepare value tuples for call to syncwrite
+        writeableVals = []
+
+        for vals in valueTuples:
+            sid = vals[0]
+            gain = vals[1]
+            
+            # split gain into 2 bytes
+            writeableVals.append(
+                ( sid, 
+                DXL_LOBYTE(gain), DXL_HIBYTE(gain) )
+            )
+
+        # use sync write to broadcast multi servo message
+        self.sync_write(DXL_POSITION_D_GAIN, writeableVals)
+
+    def set_multi_velocity_p_gain(self, valueTuples):
+        """
+        Set different position P-gains for multiple servos.
+        Should be called as such:
+        set_multi_velocity_p_gain( ( (id1, gain1), (id2, gain2), (id3, gain3) ) )
+        """
+        # prepare value tuples for call to syncwrite
+        writeableVals = []
+
+        for vals in valueTuples:
+            sid = vals[0]
+            gain = vals[1]
+            
+            # split gain into 2 bytes
+            writeableVals.append(
+                ( sid, 
+                DXL_LOBYTE(gain), DXL_HIBYTE(gain) )
+            )
+
+        # use sync write to broadcast multi servo message
+        self.sync_write(DXL_VELOCITY_P_GAIN, writeableVals)
+
+    def set_multi_velocity_i_gain(self, valueTuples):
+        """
+        Set different position I-gains for multiple servos.
+        Should be called as such:
+        set_multi_velocity_i_gain( ( (id1, gain1), (id2, gain2), (id3, gain3) ) )
+        """
+        # prepare value tuples for call to syncwrite
+        writeableVals = []
+
+        for vals in valueTuples:
+            sid = vals[0]
+            gain = vals[1]
+            
+            # split gain into 2 bytes
+            writeableVals.append(
+                ( sid, 
+                DXL_LOBYTE(gain), DXL_HIBYTE(gain) )
+            )
+
+        # use sync write to broadcast multi servo message
+        self.sync_write(DXL_VELOCITY_I_GAIN, writeableVals)
+
+    def set_multi_feedforward_1st_gain(self, valueTuples):
+        """
+        Set different position P-gains for multiple servos.
+        Should be called as such:
+        set_multi_feedforward_1st_gain( ( (id1, gain1), (id2, gain2), (id3, gain3) ) )
+        """
+        # prepare value tuples for call to syncwrite
+        writeableVals = []
+
+        for vals in valueTuples:
+            sid = vals[0]
+            gain = vals[1]
+            
+            # split gain into 2 bytes
+            writeableVals.append(
+                ( sid, 
+                DXL_LOBYTE(gain), DXL_HIBYTE(gain) )
+            )
+
+        # use sync write to broadcast multi servo message
+        self.sync_write(DXL_FF_1ST_GAIN, writeableVals)
+
+    def set_multi_feedforward_2nd_gain(self, valueTuples):
+        """
+        Set different position I-gains for multiple servos.
+        Should be called as such:
+        set_multi_feedforward_2nd_gain( ( (id1, gain1), (id2, gain2), (id3, gain3) ) )
+        """
+        # prepare value tuples for call to syncwrite
+        writeableVals = []
+
+        for vals in valueTuples:
+            sid = vals[0]
+            gain = vals[1]
+            
+            # split gain into 2 bytes
+            writeableVals.append(
+                ( sid, 
+                DXL_LOBYTE(gain), DXL_HIBYTE(gain) )
+            )
+
+        # use sync write to broadcast multi servo message
+        self.sync_write(DXL_FF_2ND_GAIN, writeableVals)
+
     def set_multi_position(self, valueTuples):
         """
         Set different positions for multiple servos.

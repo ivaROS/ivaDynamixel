@@ -1,4 +1,9 @@
 cmake_minimum_required(VERSION 2.8.3)
+
+if (POLICY CMP0048)
+  cmake_policy(SET CMP0048 NEW)
+endif (POLICY CMP0048)
+
 project(dynamixel_controllers)
 
 find_package(catkin REQUIRED COMPONENTS message_generation)
@@ -6,9 +11,7 @@ find_package(catkin REQUIRED COMPONENTS message_generation)
 add_service_files(
   FILES
   RestartController.srv
-  SetComplianceMargin.srv
-  SetCompliancePunch.srv
-  SetComplianceSlope.srv
+  SetGain.srv
   SetSpeed.srv
   SetTorqueLimit.srv
   StartController.srv

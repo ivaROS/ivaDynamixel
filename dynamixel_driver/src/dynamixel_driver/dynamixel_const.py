@@ -204,7 +204,7 @@ DXL_MODEL_TO_PARAMS = {
         "rpm_sq_per_tick": 214.577,       # [TODO] not implemented
         "load_per_tick": 0.1,             # % / tick    # [TODO] not implemented
         "pwm_per_tick": 0.113,            # % / tick 
-        "max_velocity_tick": 1023,         # max configurable velocity (units: ticks)
+        "max_velocity_tick": 1023,        # max configurable velocity (units: ticks)
         "max_load_tick": 1000,            # max configurable current (units: ticks, -1000 to +1000)    # [TODO] not implemented
         "max_pwm_tick": 885,              # max configurable PWM (units: ticks)
         "max_acceleration_tick": 32767,   # max configurable acceleration (units: ticks)    # [TODO] not implemented
@@ -220,7 +220,7 @@ DXL_MODEL_TO_PARAMS = {
         "rpm_sq_per_tick": 214.577,       # [TODO] not implemented
         "current_per_tick": 0.00336,      # mA / tick
         "pwm_per_tick": 0.113,            # % / tick 
-        "max_velocity_tick": 1023,         # max configurable velocity (units: ticks)
+        "max_velocity_tick": 1023,        # max configurable velocity (units: ticks)
         "max_current_tick": 1941,         # max configurable current (units: ticks)
         "max_pwm_tick": 885,              # max configurable PWM (units: ticks)
         "max_acceleration_tick": 32767,   # max configurable acceleration (units: ticks)    # [TODO] not implemented
@@ -236,7 +236,7 @@ DXL_MODEL_TO_PARAMS = {
         "rpm_sq_per_tick": 214.577,       # [TODO] not implemented
         "current_per_tick": 0.00336,      # mA / tick
         "pwm_per_tick": 0.113,            # % / tick 
-        "max_velocity_tick": 1023,         # max configurable velocity (units: ticks)
+        "max_velocity_tick": 1023,        # max configurable velocity (units: ticks)
         "max_current_tick": 2047,         # max configurable current (units: ticks)
         "max_pwm_tick": 885,              # max configurable PWM (units: ticks)
         "max_acceleration_tick": 32767,   # max configurable acceleration (units: ticks)    # [TODO] not implemented

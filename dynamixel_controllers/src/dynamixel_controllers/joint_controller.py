@@ -235,6 +235,15 @@ class JointController:
         self.command_sub.unregister()
         self.speed_service.shutdown("normal shutdown")
         self.torque_service.shutdown("normal shutdown")
+        self.torque_limit_service.shutdown("normal shutdown")
+
+        self.position_p_gain_service.shutdown("normal shutdown")
+        self.position_i_gain_service.shutdown("normal shutdown")
+        self.position_d_gain_service.shutdown("normal shutdown")
+        self.velocity_p_gain_service.shutdown("normal shutdown")
+        self.velocity_i_gain_service.shutdown("normal shutdown")
+        self.feedforward_1st_gain_service.shutdown("normal shutdown")
+        self.feedforward_2nd_gain_service.shutdown("normal shutdown")
 
     def set_torque_enable(self, torque_enable):
         raise NotImplementedError

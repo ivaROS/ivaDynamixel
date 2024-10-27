@@ -52,6 +52,9 @@ from dynamixel_controllers.srv import TorqueEnable
 from dynamixel_controllers.srv import SetComplianceSlope
 from dynamixel_controllers.srv import SetComplianceMargin
 from dynamixel_controllers.srv import SetCompliancePunch
+from dynamixel_controllers.srv import SetPGain
+from dynamixel_controllers.srv import SetIGain
+from dynamixel_controllers.srv import SetDGain
 from dynamixel_controllers.srv import SetTorqueLimit
 
 from std_msgs.msg import Float64
@@ -77,6 +80,15 @@ class JointController:
         )
         self.compliance_punch = rospy.get_param(
             self.controller_namespace + "/joint_compliance_punch", None
+        )
+        self.p_gain = rospy.get_param(
+            self.controller_namespace + "/joint_p_gain", None
+        )
+        self.i_gain = rospy.get_param(
+            self.controller_namespace + "/joint_i_gain", None
+        )
+        self.d_gain = rospy.get_param(
+            self.controller_namespace + "/joint_d_gain", None
         )
         self.torque_limit = rospy.get_param(
             self.controller_namespace + "/joint_torque_limit", None
@@ -106,6 +118,21 @@ class JointController:
             self.controller_namespace + "/set_compliance_punch",
             SetCompliancePunch,
             self.process_set_compliance_punch,
+        )
+        self.p_gain_service = rospy.Service(
+            self.controller_namespace + "/set_p_gain",
+            SetPGain,
+            self.process_p_gain,
+        )
+        self.i_gain_service = rospy.Service(
+            self.controller_namespace + "/set_i_gain",
+            SetIGain,
+            self.process_i_gain,
+        )
+        self.p_gain_service = rospy.Service(
+            self.controller_namespace + "/set_d_gain",
+            SetDGain,
+            self.process_d_gain,
         )
         self.torque_limit_service = rospy.Service(
             self.controller_namespace + "/set_torque_limit",
@@ -137,6 +164,30 @@ class JointController:
                 self.compliance_punch = DXL_MAX_PUNCH
             else:
                 self.compliance_punch = int(self.compliance_punch)
+
+        if self.p_gain is not None:
+            if self.p_gain < DXL_MIN_P_GAIN:
+                self.p_gain = DXL_MIN_P_GAIN
+            elif self.p_gain > DXL_MAX_P_GAIN:
+                self.p_gain = DXL_MAX_P_GAIN
+            else:
+                self.p_gain = int(self.p_gain)
+
+        if self.i_gain is not None:
+            if self.i_gain < DXL_MIN_I_GAIN:
+                self.i_gain = DXL_MIN_I_GAIN
+            elif self.i_gain > DXL_MAX_I_GAIN:
+                self.i_gain = DXL_MAX_I_GAIN
+            else:
+                self.i_gain = int(self.i_gain)
+
+        if self.d_gain is not None:
+            if self.d_gain < DXL_MIN_D_GAIN:
+                self.d_gain = DXL_MIN_D_GAIN
+            elif self.d_gain > DXL_MAX_D_GAIN:
+                self.d_gain = DXL_MAX_D_GAIN
+            else:
+                self.d_gain = int(self.d_gain)
 
         if self.torque_limit is not None:
             if self.torque_limit < 0:
@@ -184,6 +235,15 @@ class JointController:
 
     def set_compliance_punch(self, punch):
         raise NotImplementedError
+    
+    def set_p_gain(self, p_gain):
+        pass
+    
+    def set_i_gain(self, i_gain):
+        pass
+    
+    def set_d_gain(self, d_gain):
+        pass
 
     def set_torque_limit(self, max_torque):
         raise NotImplementedError
@@ -208,6 +268,18 @@ class JointController:
         self.set_compliance_punch(req.punch)
         return []
 
+    def process_p_gain(self, req):
+        self.set_p_gain(req.p_gain)
+        return []
+    
+    def process_i_gain(self, req):
+        self.set_i_gain(req.i_gain)
+        return []
+    
+    def process_d_gain(self, req):
+        self.set_d_gain(req.d_gain)
+        return []
+    
     def process_set_torque_limit(self, req):
         self.set_torque_limit(req.torque_limit)
         return []

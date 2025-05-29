@@ -137,6 +137,12 @@ class JointPositionController(JointController):
             self.set_compliance_margin(self.compliance_margin)
         if self.compliance_punch is not None:
             self.set_compliance_punch(self.compliance_punch)
+        if self.p_gain is not None:
+            self.set_p_gain(self.p_gain)
+        if self.i_gain is not None:
+            self.set_i_gain(self.i_gain)
+        if self.d_gain is not None:
+            self.set_d_gain(self.d_gain)
         if self.torque_limit is not None:
             self.set_torque_limit(self.torque_limit)
         if self.acceleration is not None:
@@ -219,6 +225,33 @@ class JointPositionController(JointController):
             punch = int(punch)
         mcv = (self.motor_id, punch)
         self.dxl_io.set_multi_punch([mcv])
+    
+    def set_p_gain(self, p_gain):
+        if self.p_gain < DXL_MIN_P_GAIN:
+            self.p_gain = DXL_MIN_P_GAIN
+        elif self.p_gain > DXL_MAX_P_GAIN:
+            self.p_gain = DXL_MAX_P_GAIN
+        else:
+            self.p_gain = int(self.p_gain)
+        self.dxl_io.set_p_gain(self.motor_id, p_gain)
+    
+    def set_i_gain(self, i_gain):
+        if self.i_gain < DXL_MIN_I_GAIN:
+            self.i_gain = DXL_MIN_I_GAIN
+        elif self.i_gain > DXL_MAX_I_GAIN:
+            self.i_gain = DXL_MAX_I_GAIN
+        else:
+            self.i_gain = int(self.i_gain)
+        self.dxl_io.set_i_gain(self.motor_id, i_gain)
+    
+    def set_d_gain(self, d_gain):
+        if self.d_gain < DXL_MIN_D_GAIN:
+            self.d_gain = DXL_MIN_D_GAIN
+        elif self.d_gain > DXL_MAX_D_GAIN:
+            self.d_gain = DXL_MAX_D_GAIN
+        else:
+            self.d_gain = int(self.d_gain)
+        self.dxl_io.set_d_gain(self.motor_id, d_gain)
 
     def set_torque_limit(self, max_torque):
         if max_torque > 1:
